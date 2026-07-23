@@ -1,0 +1,10 @@
+:root{--ink:#43220d;--muted:#80634f;--brand:#f2761b;--brand2:#ff9b45;--gold:#f6a340;--bg:#fff8f1;--card:#fff;--line:#f0dccb;--danger:#c84c4c;--shadow:0 12px 35px rgba(120,62,17,.10)}
+.mark{background:linear-gradient(145deg,#ff8a2b,#d85308)}
+.folio-chip,.step{background:#fff0e2;color:#e6650e}
+.field input:focus,.field select:focus,.field textarea:focus{box-shadow:0 0 0 3px #f2761b24}
+.dropzone{border-color:#efb889;background:#fffaf5}.dropzone.over{background:#fff0e2}
+.login-visual{background:linear-gradient(150deg,#ff8a2b,#e65f08)}
+.login-copy p{color:#fff4e9}.login-panel{background:#fff}.demo{background:#fff0e2;color:#7b421d}
+.sidebar{background:#d95c08;color:#fff8f0}.side-title{color:#ffd5b5}.nav-btn.active,.nav-btn:hover{background:#ffffff22}
+.confirm-box{background:#fff0e2}.records tr:hover{background:#fff8f1}
+[data-theme=dark]{--ink:#fff5ec;--muted:#d6b9a5;--bg:#28150a;--card:#3a1f10;--line:#6d3c20;--shadow:0 12px 35px #0004}

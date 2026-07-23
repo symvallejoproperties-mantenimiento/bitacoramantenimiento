@@ -1,0 +1,6 @@
+[
+  {"id":"u1","nombre":"Administrador VP","usuario":"admin","password":"Admin123!","rol":"admin","activo":true},
+  {"id":"u2","nombre":"Cristina","usuario":"cristina","password":"VP2026","rol":"encargado","activo":true},
+  {"id":"u3","nombre":"Jorge Tapia","usuario":"jorge","password":"VP2026","rol":"encargado","activo":true},
+  {"id":"u4","nombre":"Mantenimiento VP","usuario":"mantenimiento","password":"Mantenimiento2026!","rol":"admin","activo":true}
+]
