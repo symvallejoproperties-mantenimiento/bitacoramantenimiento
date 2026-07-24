@@ -16,7 +16,16 @@ La aplicación debe abrirse mediante un servidor local (no directamente como arc
 - Encargado: `cristina` / `VP2026`
 - Encargado: `jorge` / `VP2026`
 
-Los usuarios, ubicaciones, bitácoras, evidencias, firmas y configuración se conservan en el almacenamiento local del navegador. Para restablecer los datos iniciales, elimina los datos del sitio desde la configuración del navegador.
+Los usuarios, ubicaciones, bitácoras, evidencias, firmas y configuración se sincronizan mediante Supabase. El navegador conserva una copia local para facilitar la migración de registros existentes.
+
+## Activación de Supabase
+
+1. En el proyecto de Supabase abre **Editor SQL**.
+2. Crea una consulta nueva.
+3. Copia y ejecuta todo el contenido de `supabase-setup.sql`.
+4. Publica nuevamente esta carpeta en GitHub Pages.
+
+La aplicación usa únicamente la clave publicable. Nunca agregues una llave que comience con `sb_secret_`.
 
 ## Exportación PDF
 
