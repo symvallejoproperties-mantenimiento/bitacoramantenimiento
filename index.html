@@ -3,29 +3,134 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Portal de mantenimiento de Vallejo Properties">
-  <title>Bitácora Digital · Vallejo Properties</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/home.css">
+  <meta name="description" content="Centro de Operaciones de Mantenimiento de Vallejo Properties">
+  <title>Centro de Operaciones | Vallejo Properties</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="public-header">
-    <a class="brand" href="index.html"><span class="mark">VP</span><span class="brand-text"><strong>Vallejo Properties</strong><span>Centro de Mantenimiento</span></span></a>
-    <nav aria-label="Menú principal"><a href="#accesos">Inicio</a><a href="captura.html">Trabajos</a><a href="login.html">Administración</a></nav>
+  <header class="app-header">
+    <div class="brand">
+      <img src="assets/logo-vallejo-properties.png" alt="Vallejo Properties">
+      <div><strong>CENTRO DE OPERACIONES</strong><span>Mantenimiento</span></div>
+    </div>
+    <div class="header-tools">
+      <div class="clock"><b id="dateNow"></b><span id="timeNow"></span></div>
+      <span class="connection"><i></i> Conectado</span>
+      <button class="btn btn-outline" id="refreshBtn">Actualizar</button>
+      <label class="btn btn-primary" for="excelInput">Cargar Excel</label>
+      <input id="excelInput" type="file" accept=".xlsx,.xls" hidden>
+    </div>
   </header>
+
+  <nav class="nav-tabs" aria-label="Secciones">
+    <button class="active" data-target="overview">Vista ejecutiva</button>
+    <button data-target="analytics">Analítica</button>
+    <button data-target="properties">Predios y clientes</button>
+    <button data-target="tickets">Tickets</button>
+  </nav>
+
   <main>
-    <section class="hero">
-      <div class="hero-copy"><span class="eyebrow">Mantenimiento organizado</span><h1>Cada servicio,<br><em>bien documentado.</em></h1><p>Registra trabajos de mantenimiento y conserva en un solo lugar el seguimiento, las evidencias y la conformidad del cliente.</p><a class="btn primary hero-button" href="captura.html">Registrar un trabajo →</a></div>
-      <div class="hero-panel" aria-hidden="true"><span class="panel-label">BITÁCORA DIGITAL</span><div class="panel-folio"><small>REGISTRO DE SERVICIO</small><strong>VP-000001</strong></div><div class="panel-lines"><i></i><i></i><i></i></div><div class="panel-status"><span></span> Sistema disponible</div></div>
+    <section class="filters panel">
+      <div class="section-title"><div><span>CONTROL GLOBAL</span><h2>Filtros operativos</h2></div><button id="clearFilters" class="text-btn">Limpiar filtros</button></div>
+      <div class="filter-grid">
+        <label>Mes<select id="fMonth"></select></label>
+        <label>Año<select id="fYear"></select></label>
+        <label>Semana<select id="fWeek"></select></label>
+        <label>Cliente<select id="fClient"></select></label>
+        <label>Predio<select id="fLocation"></select></label>
+        <label>Departamento<select id="fDepartment"></select></label>
+        <label>Responsable<select id="fOwner"></select></label>
+        <label>Estado<select id="fStatus"></select></label>
+        <label>Prioridad<select id="fPriority"></select></label>
+        <label>Tipo de servicio<select id="fType"></select></label>
+        <label>Buscar ticket<input id="fTicket" placeholder="V-ID-000"></label>
+        <label>Buscar cliente<input id="fClientSearch" placeholder="Nombre o razón social"></label>
+      </div>
+      <p class="data-note"><b id="recordCount">0</b> registros visibles · Fuente: <span id="sourceName">Centro de Operaciones.xlsx</span></p>
     </section>
-    <section class="public-sections" id="accesos">
-      <div class="section-heading"><span class="eyebrow">Accesos principales</span><h2>¿Qué deseas hacer?</h2></div>
-      <div class="access-grid">
-        <a class="access-card" href="captura.html"><span class="access-number">01</span><span class="access-icon">✓</span><h3>Trabajos</h3><p>Captura una nueva bitácora, agrega fotografías, firma digital y registra la conformidad del servicio.</p><strong>Abrir bitácora <span>→</span></strong></a>
-        <a class="access-card" href="login.html"><span class="access-number">02</span><span class="access-icon">▦</span><h3>Administración</h3><p>Consulta la información de las bitácoras, revisa indicadores, genera reportes y administra los catálogos.</p><strong>Ingresar al panel <span>→</span></strong><small>Acceso protegido</small></a>
+
+    <section id="overview" class="view active">
+      <div id="kpiGrid" class="kpi-grid"></div>
+      <div class="executive-grid">
+        <article class="panel signal-panel">
+          <div class="section-title"><div><span>ESTADO GENERAL</span><h2>Semáforo operativo</h2></div></div>
+          <div id="trafficSignal" class="traffic-signal"></div>
+        </article>
+        <aside class="panel alerts-panel">
+          <div class="section-title"><div><span>ATENCIÓN REQUERIDA</span><h2>Alertas operativas</h2></div></div>
+          <div id="alertsList" class="alerts-list"></div>
+        </aside>
+        <article class="panel efficiency-panel">
+          <div class="section-title"><div><span>DESEMPEÑO</span><h2>Indicadores de eficiencia</h2></div></div>
+          <div id="efficiencyGrid" class="efficiency-grid"></div>
+        </article>
+      </div>
+      <div class="charts-grid">
+        <article class="panel chart-wide"><div class="section-title"><div><span>TENDENCIA</span><h2>Reportes por mes</h2></div><b id="monthlyChange"></b></div><canvas id="monthlyChart"></canvas><div id="monthlyTable"></div><p class="chart-note">ⓘ Indica si aumentaron o disminuyeron los reportes.</p></article>
+        <article class="panel"><div class="section-title"><div><span>DISTRIBUCIÓN</span><h2>Reportes por estado</h2></div></div><div id="statusBars" class="bar-list"></div><div id="statusTable"></div><p class="chart-note">ⓘ Compara reportes concluidos y abiertos.</p></article>
+        <article class="panel"><div class="section-title"><div><span>PRIORIDAD</span><h2>Carga operativa</h2></div></div><div class="donut-layout"><div id="priorityDonut" class="donut"></div><div id="priorityLegend" class="legend-list"></div></div><div id="priorityTable"></div><p class="chart-note">ⓘ Críticos y altos requieren atención prioritaria.</p></article>
+        <article class="panel"><div class="section-title"><div><span>TIPO DE SERVICIO</span><h2>Reportes por tipo</h2></div></div><div id="typeBars" class="bar-list"></div><div id="typeTable"></div><p class="chart-note">ⓘ Un reporte puede contar en más de un tipo cuando contiene servicios separados por comas.</p></article>
       </div>
     </section>
+
+    <section id="analytics" class="view">
+      <div class="charts-grid analytics-grid">
+        <article class="panel"><div class="section-title"><div><span>PRODUCTIVIDAD</span><h2>Reportes por responsable</h2></div></div><div class="status-legend"><span><i class="solved"></i>Verde: resueltos</span><span><i class="process"></i>Amarillo: en proceso</span><span><i class="pending"></i>Rojo: sin resolver</span></div><div id="ownerBars" class="status-breakdown"></div><div id="ownerTable"></div></article>
+        <article class="panel"><div class="section-title"><div><span>ORIGEN</span><h2>Reportes por departamento</h2></div></div><div class="status-legend"><span><i class="solved"></i>Verde: resueltos</span><span><i class="process"></i>Amarillo: en proceso</span><span><i class="pending"></i>Rojo: sin resolver</span></div><div id="departmentBars" class="status-breakdown"></div><div id="departmentTable"></div></article>
+        <article class="panel chart-wide"><div class="section-title"><div><span>COMPARATIVO</span><h2>Registrados, resueltos y no resueltos</h2></div></div><canvas id="openClosedChart"></canvas><div id="openClosedTable"></div><p class="chart-note">ⓘ En cada mes: registrados = resueltos + no resueltos.</p></article>
+        <article class="panel chart-wide response-panel"><div class="section-title"><div><span>TIEMPOS</span><h2>Tiempo de respuesta estimado</h2></div><strong id="responseAverage"></strong></div><div id="responseBands" class="response-bands"></div><canvas id="resolutionChart"></canvas><div id="resolutionTable"></div><p id="responseNote" class="chart-note"></p></article>
+      </div>
+      <article class="panel">
+        <div class="section-title"><div><span>FECHA COMPROMISO</span><h2>Cumplimiento por responsable</h2></div></div>
+        <div id="slaTable" class="ranking-table"></div>
+        <p class="chart-note">ⓘ Cierres realizados en la fecha prometida o antes.</p>
+      </article>
+    </section>
+
+    <section id="properties" class="view">
+      <article class="panel property-signal">
+        <div class="section-title"><div><span>ESTADO GENERAL DE PREDIOS</span><h2>Semáforo operativo</h2></div></div>
+        <div id="propertyTrafficSignal" class="traffic-signal"></div>
+        <div id="propertyZeroMetrics" class="zero-metrics"></div>
+      </article>
+      <article class="panel">
+        <div class="section-title"><div><span>MAPA OPERATIVO</span><h2>Estado por predio</h2></div></div>
+        <div id="propertyMap" class="property-map"></div>
+        <p class="chart-note">ⓘ Rojo: vencidos · Amarillo: abiertos · Verde: controlado.</p>
+      </article>
+      <div class="analysis-columns">
+        <article class="panel"><div class="section-title"><div><span>CLIENTES</span><h2>Análisis de incidencias</h2></div></div><div id="clientAnalysis" class="analysis-list"></div></article>
+        <article class="panel"><div class="section-title"><div><span>PREDIOS</span><h2>Análisis de mantenimiento</h2></div></div><div id="propertyAnalysis" class="analysis-list"></div></article>
+      </div>
+      <article class="panel">
+        <div class="section-title"><div><span>RANKING EJECUTIVO</span><h2>Top responsables</h2></div></div>
+        <div id="ownerRanking" class="ranking-table"></div>
+        <p class="chart-note">ⓘ Compara asignados, cierres, tiempo y cumplimiento.</p>
+      </article>
+    </section>
+
+    <section id="tickets" class="view">
+      <article class="panel table-panel">
+        <div class="section-title">
+          <div><span>OPERACIÓN DETALLADA</span><h2>Tabla principal de tickets</h2></div>
+          <div class="table-actions">
+            <input id="tableSearch" placeholder="Buscar en la tabla">
+            <button class="btn btn-outline" id="exportExcel">Exportar Excel</button>
+            <button class="btn btn-outline" id="printBtn">Exportar PDF / Imprimir</button>
+          </div>
+        </div>
+        <div class="table-scroll"><table><thead id="ticketHead"></thead><tbody id="ticketBody"></tbody></table></div>
+        <p class="chart-note table-note">ⓘ Cada fila representa un ticket del archivo fuente.</p>
+        <div class="pagination"><span id="pageInfo"></span><div><button id="prevPage">Anterior</button><button id="nextPage">Siguiente</button></div></div>
+      </article>
+    </section>
   </main>
-  <footer><strong>Vallejo Properties</strong><span>Bitácora Digital de Mantenimiento · 2026</span></footer>
+
+  <img class="watermark" src="assets/logo-vallejo-properties.png" alt="">
+  <div id="toast" class="toast" role="status"></div>
+  <div id="chartTooltip" class="chart-tooltip"></div>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="data/default-data.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
