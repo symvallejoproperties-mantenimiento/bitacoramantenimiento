@@ -86,6 +86,14 @@ export const DB = {
     this.lastError='';
     return remote;
   },
+  async refreshSharedState(){
+    const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings];
+    const states=await cloud(`app_state?select=key,value&key=in.(${stateKeys.join(',')})`);
+    (states||[]).forEach(item=>this.write(item.key,item.value,{sync:false}));
+    this.online=true;
+    this.lastError='';
+    return states;
+  },
   async syncState(key,value){
     await cloud('app_state?on_conflict=key',{
       method:'POST',
@@ -93,6 +101,11 @@ export const DB = {
       body:JSON.stringify({key,value,updated_at:new Date().toISOString()})
     });
     this.online=true;
+  },
+  async saveShared(key,value){
+    this.write(key,value,{sync:false});
+    await this.syncState(key,value);
+    return value;
   },
   records(){return this.read(this.keys.records)}, users(){return this.read(this.keys.users)}, properties(){return this.read(this.keys.properties)}, settings(){return this.read(this.keys.settings,{})},
   async saveRecord(record,{forceInsert=false,preserveFolio=false}={}){
