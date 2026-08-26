@@ -2,6 +2,12 @@
 
 Sistema web local desarrollado únicamente con HTML5, CSS3 y JavaScript ES6.
 
+## Compatibilidad móvil
+
+Esta edición está optimizada para Safari en iPhone, Chrome, Firefox y navegadores móviles basados en WebKit. Incluye conexión anticipada con Supabase, reintentos en redes celulares lentas, caché mediante Service Worker, guardado local temporal y sincronización automática cuando vuelve la señal. Las fotografías se comprimen para reducir el consumo de datos y memoria.
+
+Para publicar, sube **todo el contenido de esta carpeta** a la raíz del repositorio de GitHub Pages. El Service Worker requiere HTTPS, que GitHub Pages proporciona automáticamente.
+
 ## Ejecución
 
 La aplicación debe abrirse mediante un servidor local (no directamente como archivo) para permitir la carga de los catálogos JSON.
