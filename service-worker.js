@@ -1,5 +1,5 @@
-const CACHE='bitacora-vp-ios-v5';
-const SHELL=['./','./index.html','./captura.html','./login.html','./admin.html','./manifest.webmanifest','./css/style.css','./css/home.css','./css/components.css','./css/captura.css','./css/login.css','./css/dashboard.css','./js/app-shell.js','./js/storage.js','./js/auth.js','./js/utils.js','./js/captura.js','./js/login.js','./js/dashboard.js','./data/predios.json','./data/usuarios.json'];
+const CACHE='bitacora-vp-ios-v6';
+const SHELL=['./','./index.html','./captura.html','./vip.html','./login.html','./admin.html','./manifest.webmanifest','./css/style.css','./css/home.css','./css/components.css','./css/captura.css','./css/login.css','./css/dashboard.css','./js/app-shell.js','./js/storage.js','./js/auth.js','./js/utils.js','./js/captura.js','./js/login.js','./js/dashboard.js','./data/predios.json','./data/usuarios.json'];
 
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
