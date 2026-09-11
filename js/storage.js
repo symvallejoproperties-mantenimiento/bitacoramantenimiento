@@ -67,6 +67,15 @@ export const DB = {
     if(!localStorage.getItem(this.keys.settings))this.write(this.keys.settings,{nextFolio:1,theme:'light',logo:'',types:['Preventivo','Correctivo','Electricidad','Plomería','Pintura','Limpieza','Jardinería','Inspección','Otro'],responsibles:['Cristina','Jorge Tapia','Verónica','Isaac','Samuel','Sharon','Andrés','Aldo','Contratista']},{sync:false});
     try{
       await this.syncAll();
+      const properties=this.properties();
+      if(!properties.includes('CAMPIRANO')){
+        properties.push('CAMPIRANO');
+        properties.sort((a,b)=>a.localeCompare(b,'es'));
+        await this.saveShared(this.keys.properties,properties);
+      }
+      const settings=this.settings();
+      settings.types=Array.from(new Set([...(settings.types||[]),'Preventivo','Correctivo','Programado']));
+      await this.saveShared(this.keys.settings,settings);
       await this.flushPending();
       this.online=true;
       this.lastError='';

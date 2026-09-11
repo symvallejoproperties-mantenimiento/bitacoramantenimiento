@@ -6,5 +6,7 @@ export function signature(canvas){
   ['mousedown','touchstart'].forEach(x=>canvas.addEventListener(x,start,{passive:false}));
   ['mousemove','touchmove'].forEach(x=>canvas.addEventListener(x,move,{passive:false}));
   addEventListener('mouseup',()=>drawing=false);canvas.addEventListener('touchend',()=>drawing=false);
-  return{clear:()=>{c.clearRect(0,0,canvas.width,canvas.height);hasInk=false},data:()=>canvas.toDataURL('image/png'),isEmpty:()=>!hasInk};
+  const clear=()=>{c.clearRect(0,0,canvas.width,canvas.height);hasInk=false};
+  const load=src=>new Promise(resolve=>{clear();if(!src)return resolve();const image=new Image();image.onload=()=>{c.drawImage(image,0,0,canvas.width,canvas.height);hasInk=true;resolve()};image.onerror=resolve;image.src=src});
+  return{clear,data:()=>canvas.toDataURL('image/png'),isEmpty:()=>!hasInk,load};
 }
