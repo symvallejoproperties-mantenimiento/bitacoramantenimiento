@@ -203,11 +203,14 @@ export const DB = {
     const now=new Date().toISOString();
     record.updatedAt=record.updatedAt||now;
     const exists=!forceInsert&&this.records().some(item=>item.id===record.id);
-    this.cacheRecord({...record,_pendingSync:true});
     try{
       const saved=await this.persistRecord(record,{preserveFolio:preserveFolio||exists});
-      this.cacheRecord(saved);
-      this.write(this.keys.pending,this.pending().filter(item=>item.record.id!==record.id),{sync:false});
+      try{
+        this.cacheRecord(saved);
+        this.write(this.keys.pending,this.pending().filter(item=>item.record.id!==record.id),{sync:false});
+      }catch(cacheError){
+        console.warn('La bitácora se guardó en la nube, pero el almacenamiento local del teléfono está lleno.',cacheError);
+      }
       this.online=true;this.lastError='';
       return saved;
     }catch(error){
