@@ -1,4 +1,4 @@
-const CACHE='bitacora-vp-ios-v9';
+const CACHE='bitacora-vp-ios-v10';
 const SHELL=['./','./index.html','./captura.html','./vip.html','./login.html','./admin.html','./manifest.webmanifest','./css/style.css','./css/home.css','./css/components.css','./css/captura.css','./css/login.css','./css/dashboard.css','./js/app-shell.js','./js/storage.js','./js/auth.js','./js/utils.js','./js/captura.js','./js/login.js','./js/dashboard.js','./js/gallery.js','./js/signature.js','./js/pdf-download.js','./js/html2canvas.min.js','./data/predios.json','./data/usuarios.json','./assets/logo/mantenimiento-icon.jpg','./assets/logo/mantenimiento.jpg','./assets/logo/vallejo-properties.png'];
 
 self.addEventListener('install',event=>event.waitUntil(
@@ -36,7 +36,8 @@ self.addEventListener('fetch',event=>{
   if(event.request.mode==='navigate')event.respondWith((async()=>{
     const response=await staleWhileRevalidate(event.request);
     if(response.status!==503)return response;
-    return caches.match(PAGE_FALLBACKS[url.pathname]||'./index.html',{ignoreSearch:true})||response;
+    const fallback=await caches.match(PAGE_FALLBACKS[url.pathname]||'./index.html',{ignoreSearch:true});
+    return fallback||response;
   })());
   else if(['script','style','image'].includes(event.request.destination))event.respondWith(staleWhileRevalidate(event.request));
   else event.respondWith(caches.match(event.request,{ignoreSearch:true}).then(cached=>cached||fetch(event.request).then(async response=>{if(response.ok)(await caches.open(CACHE)).put(event.request,response.clone());return response})));
