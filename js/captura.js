@@ -1,5 +1,5 @@
-import {DB} from './storage.js?v=8';
-import {requireAuth,bindShell,can,homeFor} from './auth.js?v=6';
+import {DB} from './storage.js?v=9';
+import {requireAuth,bindShell,can,homeFor} from './auth.js?v=7';
 import {$,toast,uid,minutes,esc} from './utils.js';
 import {signature} from './signature.js?v=3';
 import {gallery} from './gallery.js?v=2';
@@ -7,7 +7,7 @@ import {downloadPdf} from './pdf-download.js';
 
 const session=await requireAuth();
 if(session.rol!=='public'&&!can(session,'trabajos'))location.href=homeFor(session);
-bindShell();try{await DB.flushPending();await Promise.all([DB.refreshRecords(),DB.refreshSharedState()])}catch(error){console.warn('Se usarán los datos disponibles en este dispositivo.',error)}
+bindShell();Promise.all([DB.flushPending(),DB.refreshRecords(),DB.refreshSharedState()]).catch(error=>console.warn('Se usarán los datos disponibles en este dispositivo.',error));
 const isVip=document.body.dataset.registro==='vip',settings=DB.settings();
 const workers=[['90-88-70-4208-4','BAUTISTA RUIZ PEDRO'],['35-14-96-1207-5','CORTEZ JIMENEZ GUSTAVO'],['39-00-80-0974-6','ESQUIVEL GUTIERREZ JORGE GUADALUPE'],['27-17-97-6551-9','LAREDO ARELLANES PEDRO LUIS'],['02-24-76-2259-6','MIRANDA COLUNGA ISRAEL'],['45-01-78-0957-0','MORENO CASTILLO JOSE RAUL'],['01-10-91-0944-5','ORTIZ NAVARRO ALEJANDRO'],['90-87-70-0466-4','RODRIGUEZ VILLAGOMEZ ANTONIO']];
 $('#folio').textContent=`${isVip?'★ ':''}VP-${String(settings.nextFolio||1).padStart(6,'0')}`;$('#currentDate').textContent=new Intl.DateTimeFormat('es-MX',{dateStyle:'full'}).format(new Date());setInterval(()=>$('#clock').textContent=new Date().toLocaleTimeString('es-MX'),1000);

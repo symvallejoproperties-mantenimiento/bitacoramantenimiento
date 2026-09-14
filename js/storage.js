@@ -61,11 +61,11 @@ export const DB = {
     return v;
   },
   setOffline(error){this.online=false;this.lastError=error?.message||String(error);console.warn('Modo local:',error)},
-  async seed(){
+  async seed({waitForCloud=false}={}){
     if(!localStorage.getItem(this.keys.users)){const r=await fetch('data/usuarios.json');this.write(this.keys.users,await r.json(),{sync:false})}
     if(!localStorage.getItem(this.keys.properties)){const r=await fetch('data/predios.json');this.write(this.keys.properties,await r.json(),{sync:false})}
     if(!localStorage.getItem(this.keys.settings))this.write(this.keys.settings,{nextFolio:1,theme:'light',logo:'',types:['Preventivo','Correctivo','Electricidad','Plomería','Pintura','Limpieza','Jardinería','Inspección','Otro'],responsibles:['Cristina','Jorge Tapia','Verónica','Isaac','Samuel','Sharon','Andrés','Aldo','Contratista']},{sync:false});
-    try{
+    const synchronize=async()=>{try{
       await this.syncAll();
       const properties=this.properties();
       if(!properties.includes('CAMPIRANO')){
@@ -81,7 +81,9 @@ export const DB = {
       this.lastError='';
     }catch(error){
       this.setOffline(error);
-    }
+    }};
+    if(!this.seedTask)this.seedTask=synchronize().finally(()=>{this.seedTask=null});
+    if(waitForCloud)await this.seedTask;
   },
   async syncAll(){
     const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings,this.keys.reports];
