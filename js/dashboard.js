@@ -36,15 +36,15 @@ $('#userList').onclick=async event=>{const toggle=event.target.closest('[data-us
 renderDashboard();
 $('#userForm [name="rol"] option[value="admin"]').textContent='Administrativo principal';
 $('#userForm [name="rol"]').onchange=event=>{const admin=event.target.value==='admin';$('#userForm [name="permisos"][value="trabajos"]').checked=true;$('#userForm [name="permisos"][value="administracion"]').checked=true;$('#userForm [name="permisos"][value="configuracion"]').checked=admin};
-const adminNav=document.createElement('nav');adminNav.className='admin-public-nav';adminNav.setAttribute('aria-label','Navegación principal');adminNav.innerHTML='<a href="index.html">Inicio</a><a href="captura.html">Trabajos</a><a class="active" href="admin.html">Administración</a>';document.querySelector('.topbar').insertBefore(adminNav,document.querySelector('.top-actions'));
-if(!can(session,'trabajos')){document.querySelector('.top-actions a[href="captura.html"]')?.remove();adminNav.querySelector('a[href="captura.html"]')?.remove()}
+const adminNav=document.createElement('nav');adminNav.className='admin-public-nav';adminNav.setAttribute('aria-label','Navegación principal');adminNav.innerHTML='<a href="./">Inicio</a><a href="captura">Trabajos</a><a class="active" href="admin">Administración</a>';document.querySelector('.topbar').insertBefore(adminNav,document.querySelector('.top-actions'));
+if(!can(session,'trabajos')){document.querySelector('.top-actions a[href="captura"]')?.remove();adminNav.querySelector('a[href="captura"]')?.remove()}
 async function refreshAdminData(){try{await Promise.all([DB.refreshRecords(),DB.refreshSharedState()]);renderDashboard();const active=document.querySelector('.section.active')?.id;if(active==='records')renderTable();if(active==='staff')renderStaff();if(active==='reports')renderReports();if(active==='config'&&can(session,'configuracion'))renderConfig()}catch(error){console.warn('No fue posible actualizar la información compartida',error)}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAdminData()});
 setInterval(refreshAdminData,20000);
 
 // Registro VIP, edición integral y recopilación mensual de firmas.
-document.querySelector('.top-actions a[href="captura.html"]')?.insertAdjacentHTML('afterend',' <a class="btn vip-button" href="vip.html">★ Nueva VIP</a>');
-adminNav.querySelector('a[href="captura.html"]')?.insertAdjacentHTML('afterend','<a href="vip.html">VIP</a>');
+document.querySelector('.top-actions a[href="captura"]')?.insertAdjacentHTML('afterend',' <a class="btn vip-button" href="vip">★ Nueva VIP</a>');
+adminNav.querySelector('a[href="captura"]')?.insertAdjacentHTML('afterend','<a href="vip">VIP</a>');
 const recordsActions=document.querySelector('#records .page-title>div:last-child');
 recordsActions?.insertAdjacentHTML('afterbegin','<button class="btn primary" id="openBatchSignatures">✍ Recopilar firmas</button> ');
 $('#filterDate')?.insertAdjacentHTML('afterend','<select id="filterCategory"><option value="">Trabajo y VIP</option><option value="Trabajo">Trabajo</option><option value="VIP">★ VIP</option></select>');
