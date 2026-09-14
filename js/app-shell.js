@@ -19,6 +19,8 @@ window.addEventListener('offline',updateConnection);
 window.addEventListener('online',updateConnection);
 if(!navigator.onLine)updateConnection();
 
+window.addEventListener('online',()=>window.dispatchEvent(new CustomEvent('vp:sync-requested')));
+
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js',{scope:'./'}).catch(error=>console.warn('No se pudo activar el modo sin conexión.',error)));
 }

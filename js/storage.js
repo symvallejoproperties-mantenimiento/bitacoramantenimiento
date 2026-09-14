@@ -49,13 +49,13 @@ function newest(a,b){
 }
 
 export const DB = {
-  keys:{records:'vp_records',users:'vp_users',properties:'vp_properties',settings:'vp_settings',session:'vp_session',pending:'vp_pending_sync'},
+  keys:{records:'vp_records',users:'vp_users',properties:'vp_properties',settings:'vp_settings',reports:'vp_signature_reports',session:'vp_session',pending:'vp_pending_sync'},
   online:false,
   lastError:'',
   read(k,f=[]){try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},
   write(k,v,{sync=true}={}){
     localStorage.setItem(k,JSON.stringify(v));
-    if(sync&&[this.keys.users,this.keys.properties,this.keys.settings].includes(k)){
+    if(sync&&[this.keys.users,this.keys.properties,this.keys.settings,this.keys.reports].includes(k)){
       this.syncState(k,v).catch(error=>this.setOffline(error));
     }
     return v;
@@ -84,11 +84,16 @@ export const DB = {
     }
   },
   async syncAll(){
-    const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings];
+    const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings,this.keys.reports];
     const states=await cloud(`app_state?select=key,value&key=in.(${stateKeys.join(',')})`);
     const remoteState=new Map((states||[]).map(item=>[item.key,item.value]));
     for(const key of stateKeys){
-      if(remoteState.has(key))this.write(key,remoteState.get(key),{sync:false});
+      if(key===this.keys.reports&&remoteState.has(key)){
+        const combined=new Map([...(this.read(key,[])),...(remoteState.get(key)||[])].map(report=>[report.id,report]));
+        const merged=[...combined.values()].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+        this.write(key,merged,{sync:false});
+        await this.syncState(key,merged);
+      }else if(remoteState.has(key))this.write(key,remoteState.get(key),{sync:false});
       else await this.syncState(key,this.read(key,key===this.keys.settings?{}:[]));
     }
 
@@ -120,9 +125,14 @@ export const DB = {
     return remote;
   },
   async refreshSharedState(){
-    const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings];
+    const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings,this.keys.reports];
     const states=await cloud(`app_state?select=key,value&key=in.(${stateKeys.join(',')})`);
-    (states||[]).forEach(item=>this.write(item.key,item.value,{sync:false}));
+    (states||[]).forEach(item=>{
+      if(item.key===this.keys.reports){
+        const combined=new Map([...(this.signatureReports()),...(item.value||[])].map(report=>[report.id,report]));
+        this.write(item.key,[...combined.values()].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)),{sync:false});
+      }else this.write(item.key,item.value,{sync:false});
+    });
     this.online=true;
     this.lastError='';
     return states;
@@ -140,7 +150,14 @@ export const DB = {
     await this.syncState(key,value);
     return value;
   },
-  records(){return this.read(this.keys.records)}, users(){return this.read(this.keys.users)}, properties(){return this.read(this.keys.properties)}, settings(){return this.read(this.keys.settings,{})},
+  records(){return this.read(this.keys.records)}, users(){return this.read(this.keys.users)}, properties(){return this.read(this.keys.properties)}, settings(){return this.read(this.keys.settings,{})}, signatureReports(){return this.read(this.keys.reports,[])},
+  async saveSignatureReport(report){
+    const reports=this.signatureReports(),index=reports.findIndex(item=>item.id===report.id);
+    if(index<0)reports.unshift(report);else reports[index]=report;
+    this.write(this.keys.reports,reports,{sync:false});
+    try{await this.syncState(this.keys.reports,reports);return {...report,_pendingSync:false}}
+    catch(error){this.setOffline(error);return {...report,_pendingSync:true}}
+  },
   pending(){return this.read(this.keys.pending,[])},
   cacheRecord(record){
     const all=this.records(),index=all.findIndex(item=>item.id===record.id);
