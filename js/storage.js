@@ -11,10 +11,11 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 const OFFLINE_DB='bitacora-vp-offline';
 const OFFLINE_STORE='pending-records';
+const PDF_STORE='source-pdfs';
 function offlineDb(){
   return new Promise((resolve,reject)=>{
-    const request=indexedDB.open(OFFLINE_DB,1);
-    request.onupgradeneeded=()=>request.result.createObjectStore(OFFLINE_STORE,{keyPath:'record.id'});
+    const request=indexedDB.open(OFFLINE_DB,2);
+    request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(OFFLINE_STORE))request.result.createObjectStore(OFFLINE_STORE,{keyPath:'record.id'});if(!request.result.objectStoreNames.contains(PDF_STORE))request.result.createObjectStore(PDF_STORE,{keyPath:'id'})};
     request.onsuccess=()=>resolve(request.result);
     request.onerror=()=>reject(request.error);
   });
@@ -43,6 +44,8 @@ async function offlineDelete(id){
     request.onerror=()=>reject(request.error);
   });
 }
+async function pdfPut(id,data){const db=await offlineDb();return new Promise((resolve,reject)=>{const request=db.transaction(PDF_STORE,'readwrite').objectStore(PDF_STORE).put({id,data});request.onsuccess=()=>resolve(data);request.onerror=()=>reject(request.error)})}
+async function pdfGet(id){const db=await offlineDb();return new Promise((resolve,reject)=>{const request=db.transaction(PDF_STORE,'readonly').objectStore(PDF_STORE).get(id);request.onsuccess=()=>resolve(request.result?.data||'');request.onerror=()=>reject(request.error)})}
 
 async function cloud(path,options={}){
   let lastError;
@@ -96,12 +99,15 @@ export const DB = {
     return v;
   },
   writeRecords(records){
+    records.filter(record=>record.archivoOriginalPdf).forEach(record=>pdfPut(record.id,record.archivoOriginalPdf).catch(()=>{}));
     try{return this.write(this.keys.records,records,{sync:false})}
     catch(error){
-      const lightweight=records.map(record=>({...record,photos:[]}));
+      const lightweight=records.map(record=>({...record,photos:[],archivoOriginalPdf:''}));
       return this.write(this.keys.records,lightweight,{sync:false});
     }
   },
+  saveSourcePdf(id,data){return pdfPut(id,data)},
+  sourcePdf(id){return pdfGet(id)},
   setOffline(error){this.online=false;this.lastError=error?.message||String(error);console.warn('Modo local:',error)},
   async seed({waitForCloud=false}={}){
     if(!localStorage.getItem(this.keys.users)){const r=await fetch('data/usuarios.json');this.write(this.keys.users,await r.json(),{sync:false})}
