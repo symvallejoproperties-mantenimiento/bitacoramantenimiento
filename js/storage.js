@@ -9,6 +9,41 @@ const cloudHeaders={
 
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
+const OFFLINE_DB='bitacora-vp-offline';
+const OFFLINE_STORE='pending-records';
+function offlineDb(){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(OFFLINE_DB,1);
+    request.onupgradeneeded=()=>request.result.createObjectStore(OFFLINE_STORE,{keyPath:'record.id'});
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+}
+async function offlineItems(){
+  const db=await offlineDb();
+  return new Promise((resolve,reject)=>{
+    const request=db.transaction(OFFLINE_STORE,'readonly').objectStore(OFFLINE_STORE).getAll();
+    request.onsuccess=()=>resolve(request.result||[]);
+    request.onerror=()=>reject(request.error);
+  });
+}
+async function offlinePut(item){
+  const db=await offlineDb();
+  return new Promise((resolve,reject)=>{
+    const request=db.transaction(OFFLINE_STORE,'readwrite').objectStore(OFFLINE_STORE).put(item);
+    request.onsuccess=()=>resolve(item);
+    request.onerror=()=>reject(request.error);
+  });
+}
+async function offlineDelete(id){
+  const db=await offlineDb();
+  return new Promise((resolve,reject)=>{
+    const request=db.transaction(OFFLINE_STORE,'readwrite').objectStore(OFFLINE_STORE).delete(id);
+    request.onsuccess=()=>resolve();
+    request.onerror=()=>reject(request.error);
+  });
+}
+
 async function cloud(path,options={}){
   let lastError;
   for(let attempt=0;attempt<3;attempt++){
@@ -60,11 +95,22 @@ export const DB = {
     }
     return v;
   },
+  writeRecords(records){
+    try{return this.write(this.keys.records,records,{sync:false})}
+    catch(error){
+      const lightweight=records.map(record=>({...record,photos:[]}));
+      return this.write(this.keys.records,lightweight,{sync:false});
+    }
+  },
   setOffline(error){this.online=false;this.lastError=error?.message||String(error);console.warn('Modo local:',error)},
   async seed({waitForCloud=false}={}){
     if(!localStorage.getItem(this.keys.users)){const r=await fetch('data/usuarios.json');this.write(this.keys.users,await r.json(),{sync:false})}
     if(!localStorage.getItem(this.keys.properties)){const r=await fetch('data/predios.json');this.write(this.keys.properties,await r.json(),{sync:false})}
     if(!localStorage.getItem(this.keys.settings))this.write(this.keys.settings,{nextFolio:1,theme:'light',logo:'',types:['Preventivo','Correctivo','Electricidad','Plomería','Pintura','Limpieza','Jardinería','Inspección','Otro'],responsibles:['Cristina','Jorge Tapia','Verónica','Isaac','Samuel','Sharon','Andrés','Aldo','Contratista']},{sync:false});
+    try{
+      const stored=await offlineItems();
+      stored.forEach(item=>this.cacheRecord({...item.record,_pendingSync:true},{compact:true}));
+    }catch(error){console.warn('No se pudo recuperar la cola sin conexión.',error)}
     const synchronize=async()=>{try{
       await this.syncAll();
       const properties=this.properties();
@@ -106,7 +152,7 @@ export const DB = {
     local.forEach(record=>combined.set(record.id,record));
     remote.forEach(record=>combined.set(record.id,newest(combined.get(record.id),record)));
     const merged=[...combined.values()].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
-    this.write(this.keys.records,merged,{sync:false});
+    this.writeRecords(merged);
 
     if(!localStorage.getItem('vp_cloud_migrated')){
       const remoteIds=new Set(remote.map(record=>record.id));
@@ -121,7 +167,7 @@ export const DB = {
     const remote=(rows||[]).map(row=>({...row.payload,id:row.id,folio:row.folio,updatedAt:row.updated_at||row.payload?.updatedAt}));
     const combined=new Map(remote.map(record=>[record.id,record]));
     this.pending().forEach(item=>combined.set(item.record.id,newest(combined.get(item.record.id),item.record)));
-    this.write(this.keys.records,[...combined.values()].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)),{sync:false});
+    this.writeRecords([...combined.values()].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)));
     this.online=true;
     this.lastError='';
     return remote;
@@ -161,18 +207,27 @@ export const DB = {
     catch(error){this.setOffline(error);return {...report,_pendingSync:true}}
   },
   pending(){return this.read(this.keys.pending,[])},
-  cacheRecord(record){
+  cacheRecord(record,{compact=false}={}){
     const all=this.records(),index=all.findIndex(item=>item.id===record.id);
     if(index<0)all.unshift(record);else all[index]=record;
-    this.write(this.keys.records,all,{sync:false});
+    try{this.writeRecords(all)}
+    catch(error){
+      if(!compact)throw error;
+      const light=all.map(item=>({...item,photos:[]}));
+      this.write(this.keys.records,light,{sync:false});
+    }
     return record;
   },
-  queueRecord(record,preserveFolio=false){
-    const pending=this.pending(),item={record:{...record,_pendingSync:true},preserveFolio,queuedAt:new Date().toISOString()};
-    const index=pending.findIndex(entry=>entry.record.id===record.id);
-    if(index<0)pending.push(item);else pending[index]=item;
-    this.write(this.keys.pending,pending,{sync:false});
-    this.cacheRecord(item.record);
+  async queueRecord(record,preserveFolio=false){
+    const item={record:{...record,_pendingSync:true},preserveFolio,queuedAt:new Date().toISOString()};
+    await offlinePut(item);
+    try{
+      const pending=this.pending(),index=pending.findIndex(entry=>entry.record.id===record.id);
+      const lightweight={...item,record:{...item.record,photos:[]}};
+      if(index<0)pending.push(lightweight);else pending[index]=lightweight;
+      this.write(this.keys.pending,pending,{sync:false});
+      this.cacheRecord(item.record,{compact:true});
+    }catch(error){console.warn('La copia completa quedó protegida en el almacenamiento sin conexión.',error)}
     return item.record;
   },
   async persistRecord(record,{preserveFolio=false}={}){
@@ -186,13 +241,19 @@ export const DB = {
     return rows?.[0]?{...rows[0].payload,id:rows[0].id,folio:rows[0].folio,updatedAt:rows[0].updated_at,_pendingSync:false}:{...record,_pendingSync:false};
   },
   async flushPending(){
-    const queued=this.pending();
+    let queued=this.pending();
+    try{
+      const durable=await offlineItems();
+      const combined=new Map(queued.map(item=>[item.record.id,item]));
+      durable.forEach(item=>combined.set(item.record.id,item));
+      queued=[...combined.values()];
+    }catch(error){console.warn('No se pudo consultar la cola sin conexión.',error)}
     if(!queued.length)return[];
     const remaining=[],synced=[];
     for(const item of queued){
       try{
         const saved=await this.persistRecord(item.record,{preserveFolio:item.preserveFolio});
-        this.cacheRecord(saved);synced.push(saved);
+        this.cacheRecord(saved,{compact:true});await offlineDelete(item.record.id);synced.push(saved);
       }catch(error){remaining.push(item);this.setOffline(error)}
     }
     this.write(this.keys.pending,remaining,{sync:false});
@@ -215,7 +276,7 @@ export const DB = {
       return saved;
     }catch(error){
       this.setOffline(error);
-      return this.queueRecord(record,preserveFolio||exists);
+      return await this.queueRecord(record,preserveFolio||exists);
     }
   },
   async removeRecord(id){

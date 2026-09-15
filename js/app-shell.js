@@ -24,13 +24,8 @@ window.addEventListener('online',()=>window.dispatchEvent(new CustomEvent('vp:sy
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const registration=await navigator.serviceWorker.register('./service-worker.js',{scope:'./',updateViaCache:'none'});
+      const registration=await navigator.serviceWorker.register('/service-worker.js?v=3',{scope:'/'});
       await registration.update();
-      navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        if(sessionStorage.getItem('vp-sw-v9-reloaded'))return;
-        sessionStorage.setItem('vp-sw-v9-reloaded','1');
-        location.reload();
-      });
     }catch(error){console.warn('No se pudo activar el modo sin conexión.',error)}
   });
 }
