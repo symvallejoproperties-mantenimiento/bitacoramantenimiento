@@ -89,6 +89,9 @@ dialog{border:0;border-radius:16px;padding:0;background:var(--card);color:var(--
 .annual-chart .bar span{font-size:.62rem;writing-mode:vertical-rl;transform:rotate(180deg);bottom:-72px}
 .annual-chart+.summary-table{margin-top:85px}
 
+.recovered-pdf-picker{display:grid;gap:4px;padding:22px;border:2px dashed #efa66f;border-radius:14px;background:#fff8f1;cursor:pointer;text-align:center}.recovered-pdf-picker input{margin:auto}.recovered-pdf-picker small{color:var(--muted)}.recovered-pdf-list{display:grid;gap:14px;margin-top:18px}.recovered-pdf-card{display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:start;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}.recovered-pdf-icon{display:grid;place-items:center;width:52px;height:62px;border-radius:8px;background:#c84d32;color:#fff;font-size:.75rem;font-weight:900}.recovered-pdf-fields>strong{display:block;margin-bottom:12px}.recovered-pdf-notice{display:grid;grid-template-columns:1fr auto;gap:6px 18px;align-items:center;margin-bottom:18px;padding:15px;border:1px solid #efa66f;border-radius:12px;background:#fff4e9}.recovered-pdf-notice strong,.recovered-pdf-notice span{grid-column:1}.recovered-pdf-notice a{grid-column:2;grid-row:1/3}.recovered-pdf-card input,.recovered-pdf-card select{width:100%}@media(max-width:760px){.recovered-pdf-card{grid-template-columns:42px 1fr}.recovered-pdf-card>.btn{grid-column:1/-1}.recovered-pdf-notice{grid-template-columns:1fr}.recovered-pdf-notice a{grid-column:1;grid-row:auto}}
+.recovered-badge{display:inline-block;margin-top:5px;padding:3px 7px;border-radius:999px;background:#fff0de;color:#a3470a;font-size:.67rem;font-weight:800}
+
 .report-toolbar{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr)) 180px;gap:16px;align-items:end;margin-bottom:20px}
 .report-total{text-align:right}
 .report-total span{display:block;color:var(--muted);font-size:.8rem}
