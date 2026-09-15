@@ -211,4 +211,6 @@ body.printing-batch-report #batchReportBody{box-shadow:none;width:100%}
 .archived-report-info>strong{font-size:17px}.archived-report-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 @media(max-width:650px){.report-preview-card{grid-template-columns:1fr}.report-preview-sheet{width:100%}.archived-report-actions{width:100%}.archived-report-actions .btn{flex:1}}
 @media(max-width:650px){.archive-title,.archived-report{align-items:flex-start;flex-direction:column}.archived-report .btn{width:100%}}
-}
+.missing-media{display:grid;min-height:82px;place-items:center;margin:0;border:1px dashed #d9c5b8;border-radius:10px;background:#fffaf6;color:#80685a;font-size:12px;text-align:center}
+.recovered-pdf-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.recovered-table-note{display:inline-block;padding:3px 7px;border-radius:999px;background:#fff0dc;color:#a74a0c;font-size:10px;font-weight:800;white-space:nowrap}
