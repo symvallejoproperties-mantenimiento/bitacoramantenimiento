@@ -1,4 +1,4 @@
-const CACHE='bitacora-vp-ios-v3';
+const CACHE='bitacora-vp-ios-v4';
 const SHELL=[
   './','./index.html','./captura.html','./vip.html','./login.html','./admin.html','./manifest.webmanifest',
   './css/style.css','./css/components.css','./css/captura.css','./css/dashboard.css','./css/home.css','./css/login.css','./css/orange.css',
