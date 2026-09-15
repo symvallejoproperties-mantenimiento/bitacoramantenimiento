@@ -214,3 +214,8 @@ body.printing-batch-report #batchReportBody{box-shadow:none;width:100%}
 .missing-media{display:grid;min-height:82px;place-items:center;margin:0;border:1px dashed #d9c5b8;border-radius:10px;background:#fffaf6;color:#80685a;font-size:12px;text-align:center}
 .recovered-pdf-buttons{display:flex;flex-wrap:wrap;gap:8px}
 .recovered-table-note{display:inline-block;padding:3px 7px;border-radius:999px;background:#fff0dc;color:#a74a0c;font-size:10px;font-weight:800;white-space:nowrap}
+.recovered-pdf-preview{display:grid;gap:10px;margin:16px 0 22px;padding:14px;border:1px solid #ead7c7;border-radius:14px;background:#fffaf6}
+.recovered-pdf-preview iframe{display:block;width:100%;height:min(72vh,760px);border:0;border-radius:9px;background:#eee}
+.recovered-pdf-preview small{color:#80685a}
+.recovered-pdf-loading{display:grid;min-height:260px;place-items:center;color:#80685a}
+@media(max-width:650px){.recovered-pdf-preview{padding:8px}.recovered-pdf-preview iframe{height:62vh}}
