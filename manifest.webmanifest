@@ -1,7 +1,8 @@
 {
   "name":"Bitácora Digital de Mantenimiento",
   "short_name":"Bitácora VP",
-  "start_url":"./index.html",
+  "id":"/",
+  "start_url":"/",
   "scope":"./",
   "display":"standalone",
   "background_color":"#fff8f1",
