@@ -1,8 +1,8 @@
-import {DB} from './storage.js?v=11';
+import {DB} from './storage.js?v=13';
 import {requireAuth,bindShell,can,homeFor} from './auth.js?v=7';
 import {$,toast,uid,minutes,esc} from './utils.js';
 import {signature} from './signature.js?v=3';
-import {gallery} from './gallery.js?v=2';
+import {gallery} from './gallery.js?v=3';
 import {downloadPdf} from './pdf-download.js';
 
 const session=await requireAuth();

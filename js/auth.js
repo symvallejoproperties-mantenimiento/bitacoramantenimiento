@@ -1,4 +1,4 @@
-import {DB} from './storage.js?v=11';
+import {DB} from './storage.js?v=13';
 export function permissionsFor(user={}){if(user.rol==='encargado')return{trabajos:true,administracion:true,configuracion:false};const defaults=user.rol==='admin'?{trabajos:true,administracion:true,configuracion:true}:{trabajos:true,administracion:false,configuracion:false};return{...defaults,...(user.permisos||{})}}
 export function can(user,access){return Boolean(permissionsFor(user)[access])}
 export function homeFor(user){const permissions=permissionsFor(user);if(permissions.administracion)return'admin';if(permissions.trabajos)return'captura';return'./'}

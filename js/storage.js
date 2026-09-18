@@ -1,11 +1,4 @@
-const SUPABASE_URL='https://kzacbfbnfrfklqjicdwu.supabase.co';
-const SUPABASE_KEY='sb_publishable_fJbqHul9JwA1vs5MExW_jQ_ij8609kH';
-
-const cloudHeaders={
-  apikey:SUPABASE_KEY,
-  Authorization:`Bearer ${SUPABASE_KEY}`,
-  'Content-Type':'application/json'
-};
+const CLOUD_API='/api';
 
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
@@ -53,15 +46,15 @@ async function cloud(path,options={}){
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),18000);
     try{
-      const response=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{
+      const response=await fetch(`${CLOUD_API}/${path}`,{
         ...options,
         cache:'no-store',
         signal:controller.signal,
-        headers:{...cloudHeaders,...(options.headers||{})}
+        headers:{'Content-Type':'application/json',...(options.headers||{})}
       });
       if(!response.ok){
         const detail=await response.text();
-        const error=new Error(`Supabase ${response.status}: ${detail}`);
+        const error=new Error(`Cloudflare ${response.status}: ${detail}`);
         if(response.status<500&&response.status!==408&&response.status!==429)throw error;
         lastError=error;
       }else{
@@ -71,13 +64,13 @@ async function cloud(path,options={}){
       }
     }catch(error){
       lastError=error;
-      if(error?.message?.startsWith('Supabase 4')&&!error?.message?.startsWith('Supabase 408')&&!error?.message?.startsWith('Supabase 429'))throw error;
+      if(error?.message?.startsWith('Cloudflare 4')&&!error?.message?.startsWith('Cloudflare 408')&&!error?.message?.startsWith('Cloudflare 429'))throw error;
     }finally{
       clearTimeout(timer);
     }
     if(attempt<2)await wait(700*(attempt+1));
   }
-  throw lastError||new Error('No fue posible conectar con Supabase.');
+  throw lastError||new Error('No fue posible conectar con Cloudflare.');
 }
 
 function newest(a,b){
@@ -109,6 +102,17 @@ export const DB = {
   saveSourcePdf(id,data){return pdfPut(id,data)},
   sourcePdf(id){return pdfGet(id)},
   setOffline(error){this.online=false;this.lastError=error?.message||String(error);console.warn('Modo local:',error)},
+  sameRecoveredRecord(a,b){return Boolean(a&&b&&(a.folio===b.folio||(a.recuperada&&b.recuperada&&a.folioOriginal===b.folioOriginal&&a.archivoOriginalNombre===b.archivoOriginalNombre)))},
+  async loadStaticFallbacks(){
+    try{
+      const response=await fetch('data/bitacoras-recuperadas.json',{cache:'no-store'});
+      if(!response.ok)return[];
+      const fallback=await response.json(),current=this.records();
+      for(const record of fallback){if(!current.some(item=>this.sameRecoveredRecord(item,record)))current.push(record)}
+      this.writeRecords(current.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)));
+      return fallback;
+    }catch(error){console.warn('No se pudo cargar el respaldo de bitácoras recuperadas.',error);return[]}
+  },
   async seed({waitForCloud=false}={}){
     if(!localStorage.getItem(this.keys.users)){const r=await fetch('data/usuarios.json');this.write(this.keys.users,await r.json(),{sync:false})}
     if(!localStorage.getItem(this.keys.properties)){const r=await fetch('data/predios.json');this.write(this.keys.properties,await r.json(),{sync:false})}
@@ -117,6 +121,7 @@ export const DB = {
       const stored=await offlineItems();
       stored.forEach(item=>this.cacheRecord({...item.record,_pendingSync:true},{compact:true}));
     }catch(error){console.warn('No se pudo recuperar la cola sin conexión.',error)}
+    await this.loadStaticFallbacks();
     const synchronize=async()=>{try{
       await this.syncAll();
       const properties=this.properties();
@@ -139,7 +144,7 @@ export const DB = {
   },
   async syncAll(){
     const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings,this.keys.reports];
-    const states=await cloud(`app_state?select=key,value&key=in.(${stateKeys.join(',')})`);
+    const states=await cloud(`state?keys=${encodeURIComponent(stateKeys.join(','))}`);
     const remoteState=new Map((states||[]).map(item=>[item.key,item.value]));
     for(const key of stateKeys){
       if(key===this.keys.reports&&remoteState.has(key)){
@@ -151,27 +156,26 @@ export const DB = {
       else await this.syncState(key,this.read(key,key===this.keys.settings?{}:[]));
     }
 
-    const rows=await cloud('bitacoras?select=id,folio,payload,updated_at&order=created_at.desc');
-    const remote=(rows||[]).map(row=>({...row.payload,id:row.id,folio:row.folio,updatedAt:row.updated_at||row.payload?.updatedAt}));
+    const remote=await cloud('records')||[];
     const local=this.records();
     const combined=new Map();
-    local.forEach(record=>combined.set(record.id,record));
+    local.filter(record=>!record._staticFallback||!remote.some(item=>this.sameRecoveredRecord(item,record))).forEach(record=>combined.set(record.id,record));
     remote.forEach(record=>combined.set(record.id,newest(combined.get(record.id),record)));
     const merged=[...combined.values()].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
     this.writeRecords(merged);
 
-    if(!localStorage.getItem('vp_cloud_migrated')){
+    if(!localStorage.getItem('vp_cloudflare_migrated_v1')){
       const remoteIds=new Set(remote.map(record=>record.id));
       for(const record of local.filter(item=>item.id&&!remoteIds.has(item.id))){
         await this.saveRecord(record,{forceInsert:true,preserveFolio:true});
       }
-      localStorage.setItem('vp_cloud_migrated','1');
+      localStorage.setItem('vp_cloudflare_migrated_v1','1');
     }
   },
   async refreshRecords(){
-    const rows=await cloud('bitacoras?select=id,folio,payload,updated_at&order=created_at.desc');
-    const remote=(rows||[]).map(row=>({...row.payload,id:row.id,folio:row.folio,updatedAt:row.updated_at||row.payload?.updatedAt}));
+    const remote=await cloud('records')||[];
     const combined=new Map(remote.map(record=>[record.id,record]));
+    this.records().filter(record=>record._staticFallback&&!remote.some(item=>this.sameRecoveredRecord(item,record))).forEach(record=>combined.set(record.id,record));
     this.pending().forEach(item=>combined.set(item.record.id,newest(combined.get(item.record.id),item.record)));
     this.writeRecords([...combined.values()].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)));
     this.online=true;
@@ -180,7 +184,7 @@ export const DB = {
   },
   async refreshSharedState(){
     const stateKeys=[this.keys.users,this.keys.properties,this.keys.settings,this.keys.reports];
-    const states=await cloud(`app_state?select=key,value&key=in.(${stateKeys.join(',')})`);
+    const states=await cloud(`state?keys=${encodeURIComponent(stateKeys.join(','))}`);
     (states||[]).forEach(item=>{
       if(item.key===this.keys.reports){
         const combined=new Map([...(this.signatureReports()),...(item.value||[])].map(report=>[report.id,report]));
@@ -192,10 +196,9 @@ export const DB = {
     return states;
   },
   async syncState(key,value){
-    await cloud('app_state?on_conflict=key',{
-      method:'POST',
-      headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
-      body:JSON.stringify({key,value,updated_at:new Date().toISOString()})
+    await cloud(`state/${encodeURIComponent(key)}`,{
+      method:'PUT',
+      body:JSON.stringify(value)
     });
     this.online=true;
   },
@@ -237,14 +240,10 @@ export const DB = {
     return item.record;
   },
   async persistRecord(record,{preserveFolio=false}={}){
-    const insert={id:record.id,payload:{...record,_pendingSync:false},created_at:record.createdAt||new Date().toISOString(),updated_at:record.updatedAt||new Date().toISOString()};
-    if(preserveFolio&&record.folio)insert.folio=record.folio;
-    const rows=await cloud('bitacoras?on_conflict=id&select=id,folio,payload,updated_at',{
-      method:'POST',
-      headers:{Prefer:'resolution=merge-duplicates,return=representation'},
-      body:JSON.stringify(insert)
-    });
-    return rows?.[0]?{...rows[0].payload,id:rows[0].id,folio:rows[0].folio,updatedAt:rows[0].updated_at,_pendingSync:false}:{...record,_pendingSync:false};
+    const payload={...record,_pendingSync:false};
+    if(!preserveFolio)delete payload.folio;
+    const saved=await cloud(`records/${encodeURIComponent(record.id)}`,{method:'PUT',body:JSON.stringify(payload)});
+    return {...saved,_pendingSync:false};
   },
   async flushPending(){
     let queued=this.pending();
@@ -286,7 +285,7 @@ export const DB = {
     }
   },
   async removeRecord(id){
-    await cloud(`bitacoras?id=eq.${encodeURIComponent(id)}`,{method:'DELETE'});
+    await cloud(`records/${encodeURIComponent(id)}`,{method:'DELETE'});
     this.write(this.keys.records,this.records().filter(item=>item.id!==id),{sync:false});
   },
   nextFolio(){const s=this.settings(),n=Number(s.nextFolio||1);s.nextFolio=n+1;this.write(this.keys.settings,s);return `VP-${String(n).padStart(6,'0')}`},

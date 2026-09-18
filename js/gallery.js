@@ -1,10 +1,11 @@
-import {compress} from './camera.js';
+import {compress,imageBytes} from './camera.js?v=2';
 
 export function gallery(inputs,zone,preview){
   const pickers=Array.isArray(inputs)?inputs:[inputs];
   let images=[];
   const draw=()=>{
-    preview.innerHTML=images.map((x,i)=>`<figure><img src="${x}" data-view="${i}" alt="Evidencia ${i+1}"><button type="button" data-del="${i}" aria-label="Eliminar evidencia ${i+1}">×</button></figure>`).join('')+`<span class="photo-count">${images.length} fotografía${images.length===1?'':'s'} de 8</span>`;
+    const totalKb=Math.max(0,Math.round(images.reduce((total,image)=>total+imageBytes(image),0)/1024));
+    preview.innerHTML=images.map((x,i)=>`<figure><img src="${x}" data-view="${i}" alt="Evidencia ${i+1}"><button type="button" data-del="${i}" aria-label="Eliminar evidencia ${i+1}">×</button></figure>`).join('')+`<span class="photo-count">${images.length} fotografía${images.length===1?'':'s'} de 8 · ${totalKb} KB optimizados</span>`;
   };
   const add=async files=>{
     for(const file of Array.from(files||[])){
