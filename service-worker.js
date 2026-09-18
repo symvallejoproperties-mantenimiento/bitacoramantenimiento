@@ -1,9 +1,9 @@
-const CACHE='bitacora-vp-ios-v6';
+const CACHE='bitacora-vp-ios-v9';
 const SHELL=[
   './','./index.html','./captura.html','./vip.html','./login.html','./admin.html','./manifest.webmanifest',
   './css/style.css','./css/components.css','./css/captura.css','./css/dashboard.css','./css/home.css','./css/login.css','./css/orange.css',
   './js/app-shell.js','./js/auth.js','./js/camera.js','./js/captura.js','./js/dashboard.js','./js/gallery.js','./js/html2canvas.min.js','./js/login.js','./js/pdf-download.js','./js/pdf.js','./js/reportes.js','./js/signature.js','./js/storage.js','./js/utils.js',
-  './data/predios.json','./data/usuarios.json','./assets/logo/mantenimiento-icon.jpg','./assets/logo/mantenimiento.jpg','./assets/logo/vallejo-properties.png','./assets/logo/vallejo-properties-vertical.png'
+  './data/predios.json','./data/usuarios.json','./data/bitacoras-recuperadas.json','./assets/logo/mantenimiento-icon.jpg','./assets/logo/mantenimiento.jpg','./assets/logo/vallejo-properties.png','./assets/logo/vallejo-properties-vertical.png'
 ];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(SHELL.map(url=>cache.add(url)))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('bitacora-vp-ios-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
