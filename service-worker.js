@@ -1,4 +1,4 @@
-const CACHE='bitacora-vp-ios-v9';
+const CACHE='bitacora-vp-ios-v11';
 const SHELL=[
   './','./index.html','./captura.html','./vip.html','./login.html','./admin.html','./manifest.webmanifest',
   './css/style.css','./css/components.css','./css/captura.css','./css/dashboard.css','./css/home.css','./css/login.css','./css/orange.css',
@@ -23,5 +23,10 @@ self.addEventListener('fetch',event=>{
     event.respondWith(fetch(request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(request,copy));return response}).catch(async()=>await caches.match(request)||await caches.match(offlinePage(url.pathname))||await caches.match('./index.html')));
     return;
   }
-  event.respondWith(caches.match(request,{ignoreSearch:true}).then(cached=>{const network=fetch(request).then(response=>{if(response.ok)caches.open(CACHE).then(cache=>cache.put(request,response.clone()));return response}).catch(()=>cached);return cached||network}));
+  const isCode=['style','script'].includes(request.destination);
+  if(isCode){
+    event.respondWith(fetch(request).then(response=>{if(response.ok)caches.open(CACHE).then(cache=>cache.put(request,response.clone()));return response}).catch(()=>caches.match(request)));
+    return;
+  }
+  event.respondWith(caches.match(request).then(cached=>{const network=fetch(request).then(response=>{if(response.ok)caches.open(CACHE).then(cache=>cache.put(request,response.clone()));return response}).catch(()=>cached);return cached||network}));
 });
