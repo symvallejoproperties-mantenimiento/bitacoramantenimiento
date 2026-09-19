@@ -76,6 +76,50 @@ const renderTableWithVipFolio=renderTable;renderTable=()=>{renderTableWithVipFol
 window.addEventListener('vp:sync-requested',async()=>{await DB.flushPending();const reports=DB.signatureReports();if(reports.length)DB.syncState(DB.keys.reports,reports).catch(error=>DB.setOffline(error))});
 renderTable();
 
+// Prepara todos los recursos antes de imprimir. Las fotos y firmas de D1 se
+// incrustan para que Safari/Chrome no pierdan las URLs durante la impresión.
+const printableBlobDataUrl=blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
+async function preparePrintableMedia(root){
+  const images=[...root.querySelectorAll('img')];
+  await Promise.all(images.map(async image=>{
+    const source=image.getAttribute('src');
+    if(!source)return;
+    try{
+      if(!source.startsWith('data:')){
+        const response=await fetch(new URL(source,location.href),{cache:'no-store'});
+        if(response.ok)image.src=await printableBlobDataUrl(await response.blob());
+      }
+      if(image.decode)await image.decode();
+      else if(!image.complete)await new Promise(resolve=>{image.onload=image.onerror=resolve});
+    }catch(error){console.warn('No fue posible preparar una imagen para impresión',source,error)}
+  }));
+  await document.fonts?.ready;
+}
+async function printCurrentDetail(){
+  const button=$('#printDetail'),previous=button.textContent;
+  button.disabled=true;button.textContent='Preparando imágenes…';
+  try{
+    await preparePrintableMedia($('#detailBody'));
+    document.body.classList.add('printing-detail');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
+  }finally{button.disabled=false;button.textContent=previous}
+}
+$('#recordRows').addEventListener('click',async event=>{
+  const button=event.target.closest('[data-action="print"]');
+  if(!button)return;
+  const record=records().find(item=>item.id===button.dataset.id);
+  if(!record||record.recuperada)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  showDetail(record);
+  $('#printDetail').onclick=printCurrentDetail;
+  await printCurrentDetail();
+},true);
+$('#detailDialog').addEventListener('click',event=>{
+  if(event.target.id!=='printDetail')return;
+  event.preventDefault();event.stopImmediatePropagation();
+  printCurrentDetail();
+},true);
+
 // Galería completa de reportes consolidados con vista previa y descarga individual.
 renderBatchReportArchive=()=>{const reports=DB.signatureReports();$('#batchReportCount').textContent=`${reports.length} ${reports.length===1?'reporte':'reportes'}`;$('#batchReportArchiveList').innerHTML=reports.map(report=>{const items=Array.isArray(report.items)?report.items:[];return`<article class="archived-report report-preview-card"><div class="report-preview-sheet"><span>REPORTE DE CONFORMIDAD</span><strong>${esc(report.period||'Periodo personalizado')}</strong><b>${items.length} ${items.length===1?'bitácora':'bitácoras'}</b><ul>${items.slice(0,3).map(item=>`<li>${item.esVip?'★ ':''}${esc(item.folio||'Sin folio')} · ${esc(item.predio||'Sin predio')}</li>`).join('')}${items.length>3?`<li>+ ${items.length-3} más</li>`:''}</ul><small>Firma: ${esc(report.signerName||'Pendiente')}</small></div><div class="archived-report-info"><strong>${esc(report.title||'Reporte consolidado')}</strong><small>${fmtDate(report.createdAt)} · ${items.length} bitácoras · ${esc(report.signerName||'Sin nombre')}</small><div class="archived-report-actions"><button class="btn" type="button" data-view-batch-report="${report.id}">Vista previa</button><button class="btn primary" type="button" data-download-batch-report="${report.id}">Guardar PDF</button></div></div></article>`}).join('')||'<p class="empty">Todavía no se han generado reportes de firmas.</p>'};
 async function downloadArchivedReport(report,button){const items=Array.isArray(report.items)?report.items:[];button.disabled=true;const prior=button.textContent;button.textContent='Preparando…';try{await downloadPdf({filename:`conformidad-${report.period||new Date(report.createdAt).toISOString().slice(0,10)}.pdf`,title:report.title||'Reporte consolidado de conformidad',lines:[{label:'Periodo',value:report.period||'Personalizado'},{label:'Firmó',value:report.signerName||'—'},{label:'Cargo',value:report.signerRole||'—'},{label:'Total de bitácoras',value:items.length},...items.flatMap(item=>['',`${item.esVip?'★ VIP · ':''}${item.folio||'Sin folio'} · ${fmtDate(item.fechaServicio?`${item.fechaServicio}T12:00:00`:item.createdAt)}`,`${item.cliente||'Sin cliente'} · ${item.predio||'Sin predio'} · ${item.tipo||'Sin servicio'} · ${item.estado||'Pendiente'}`])],images:report.signature?[{src:report.signature,label:`Firma de ${report.signerName||'conformidad'}`}]:[]});toast('Reporte guardado en PDF en este dispositivo.')}catch(error){console.error(error);toast('No fue posible guardar este reporte.','error')}finally{button.disabled=false;button.textContent=prior}}
@@ -99,7 +143,7 @@ $('#recoveredPdfList').oninput=event=>{const card=event.target.closest('[data-re
 $('#recoveredPdfList').onchange=$('#recoveredPdfList').oninput;
 $('#saveRecoveredPdfs').onclick=async()=>{const button=$('#saveRecoveredPdfs');for(const item of recoveredFiles){if(!item.originalFolio||!item.originalDate)return toast('Completa el folio y la fecha originales de cada PDF.','error');const normalized=item.originalFolio.toUpperCase().startsWith('VP-')?item.originalFolio.toUpperCase():`VP-${item.originalFolio.replace(/\D/g,'').padStart(6,'0')}`;if(records().some(record=>record.recuperada&&record.archivoOriginalNombre===item.file.name&&record.folioOriginal===normalized))return toast(`El archivo ${item.file.name} ya fue recuperado anteriormente.`,'error')}button.disabled=true;button.textContent='Guardando…';let saved=0;try{for(const item of recoveredFiles){const normalized=item.originalFolio.toUpperCase().startsWith('VP-')?item.originalFolio.toUpperCase():`VP-${item.originalFolio.replace(/\D/g,'').padStart(6,'0')}`,createdAt=new Date().toISOString(),record={id:uid(),folio:DB.nextFolio(),createdAt,updatedAt:createdAt,createdBy:session.nombre,fechaServicio:item.originalDate,cliente:item.cliente||'Sin cliente indicado',predio:item.predio||'Sin predio indicado',espacio:'Documento recuperado',responsable:item.responsable||session.nombre,realizador:'Según PDF original',tipo:'Bitácora recuperada desde PDF',estado:item.estado,terminado:item.estado==='Concluido'?'Sí':'No',descripcion:`Documento recuperado correspondiente al folio ${normalized}, con fecha original ${item.originalDate}.`,observaciones:item.nota||`Bitácora recuperada del folio original ${normalized}.`,registroTipo:'Trabajo',esVip:false,recuperada:true,folioOriginal:normalized,fechaOriginal:item.originalDate,archivoOriginalNombre:item.file.name,archivoOriginalPdf:item.data,photos:[],clientSignature:'',vpSignature:'',firmasPendientes:false,continuidadEstado:item.estado==='Concluido'?'No requerida':'Pendiente',history:[{action:`PDF recuperado del folio original ${normalized}`,at:createdAt,by:session.nombre}]};await DB.saveRecord(record);saved++}$('#recoveredPdfDialog').close();renderTable();renderDashboard();toast(`${saved} ${saved===1?'bitácora recuperada':'bitácoras recuperadas'} y sincronizadas.`)}catch(error){console.error(error);toast('No fue posible terminar la recuperación de los PDF.','error')}finally{button.disabled=false;button.textContent='Guardar en Administración'}};
 const blobToDataUrl=blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
-const originalPdfData=async record=>{if(record.archivoOriginalPdf)return record.archivoOriginalPdf;const stored=await DB.sourcePdf(record.id);if(stored)return stored;if(record.archivoOriginalUrl){const response=await fetch(record.archivoOriginalUrl);if(response.ok)return blobToDataUrl(await response.blob())}return''};
+const originalPdfData=async record=>{if(record.archivoOriginalPdf)return record.archivoOriginalPdf;const stored=await DB.sourcePdf(record.id);if(stored)return stored;if(record.archivoOriginalUrl){const response=await fetch(record.archivoOriginalUrl);if(response.ok){const blob=await response.blob(),header=new Uint8Array(await blob.slice(0,5).arrayBuffer()),isPdf=String.fromCharCode(...header)==='%PDF-';if(isPdf)return blobToDataUrl(blob)}}return''};
 const pdfObjectUrl=data=>{const [meta,encoded]=data.split(','),bytes=atob(encoded),buffer=new Uint8Array(bytes.length);for(let index=0;index<bytes.length;index++)buffer[index]=bytes.charCodeAt(index);return URL.createObjectURL(new Blob([buffer],{type:meta.match(/data:([^;]+)/)?.[1]||'application/pdf'}))};
 let activeRecoveredPreviewUrl='';
 function clearRecoveredPreview(){if(activeRecoveredPreviewUrl){URL.revokeObjectURL(activeRecoveredPreviewUrl);activeRecoveredPreviewUrl=''}}
