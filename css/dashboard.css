@@ -135,20 +135,28 @@ body.printing-report .pdf-sheet{width:100%;min-height:auto;padding:12mm;box-shad
 @page{size:letter;margin:8mm}
 }
 
-@media print{body.printing-detail{background:#fff!important}
+@media print{html,body{width:100%!important;min-width:0!important;margin:0!important;padding:0!important;overflow:visible!important}
+body.printing-detail{background:#fff!important}
+body.printing-detail,body.printing-detail *{box-sizing:border-box!important}
 body.printing-detail>*:not(#detailDialog){display:none!important}
-body.printing-detail #detailDialog{display:block!important;position:static!important;inset:auto!important;width:100%!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:#fff!important;color:#222!important}
+body.printing-detail #detailDialog{display:block!important;position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:#fff!important;color:#222!important}
 body.printing-detail #detailDialog::backdrop{display:none!important}
 body.printing-detail #detailDialog .modal-head{display:none!important}
 body.printing-detail #detailDialog .modal-body{display:block!important;max-height:none!important;overflow:visible!important;padding:0!important}
 body.printing-detail #detailBody{display:block!important;overflow:visible!important}
-body.printing-detail .print-sheet{display:block!important;width:100%!important;padding:0!important;margin:0!important;box-shadow:none!important}
+body.printing-detail .print-sheet{display:block!important;width:100%!important;max-width:100%!important;padding:0!important;margin:0!important;box-shadow:none!important;overflow:visible!important}
+body.printing-detail .detail-head{width:100%!important;padding:7mm!important;gap:5mm!important}
+body.printing-detail .detail-brand{min-width:0!important;flex-wrap:wrap!important}
+body.printing-detail .detail-brand img:first-child{max-width:48mm!important;height:auto!important}
+body.printing-detail .detail-brand img:last-child{max-width:13mm!important;height:auto!important}
+body.printing-detail .detail-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%!important;gap:4mm!important}
+body.printing-detail .detail-item,body.printing-detail p,body.printing-detail strong,body.printing-detail small{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important;word-break:break-word!important}
 body.printing-detail .detail-head,body.printing-detail .detail-grid,body.printing-detail .continuity-detail,body.printing-detail .evidence-strip,body.printing-detail .signature-grid{break-inside:avoid;page-break-inside:avoid}
 body.printing-detail .evidence-strip{display:flex!important;flex-wrap:wrap!important;overflow:visible!important}
 body.printing-detail .evidence-strip img{width:46mm!important;height:34mm!important;object-fit:cover!important}
-body.printing-detail .signature-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10mm!important;align-items:start!important;margin-top:8mm!important}
-body.printing-detail .signature-block{min-height:42mm!important}
-body.printing-detail .signature-block img{display:block!important;width:100%!important;max-width:75mm!important;height:30mm!important;object-fit:contain!important;object-position:left center!important;background:#fff!important}
+body.printing-detail .signature-grid{display:grid!important;grid-template-columns:1fr!important;gap:5mm!important;align-items:start!important;margin-top:8mm!important;width:100%!important}
+body.printing-detail .signature-block{min-height:38mm!important;width:100%!important;break-inside:avoid!important;page-break-inside:avoid!important}
+body.printing-detail .signature-block img{display:block!important;width:100%!important;max-width:110mm!important;height:28mm!important;object-fit:contain!important;object-position:left center!important;background:#fff!important}
 body.printing-detail .history-block{grid-column:1/-1!important;border-top:1px solid #ddd!important;padding-top:4mm!important}
 body.printing-detail h3{margin:4mm 0 2mm!important}
 @page{size:letter;margin:10mm}
