@@ -87,11 +87,14 @@ async function preparePrintableMedia(root){
     try{
       if(!source.startsWith('data:')){
         const response=await fetch(new URL(source,location.href),{cache:'no-store'});
-        if(response.ok)image.src=await printableBlobDataUrl(await response.blob());
+        if(!response.ok)throw new Error(`Imagen no disponible (${response.status})`);
+        const blob=await response.blob();if(!blob.size)throw new Error('Imagen vacía');
+        image.src=await printableBlobDataUrl(blob);
       }
       if(image.decode)await image.decode();
       else if(!image.complete)await new Promise(resolve=>{image.onload=image.onerror=resolve});
-    }catch(error){console.warn('No fue posible preparar una imagen para impresión',source,error)}
+      if(!image.naturalWidth)throw new Error('Imagen inválida');
+    }catch(error){console.warn('No fue posible preparar una imagen para impresión',source,error);const notice=document.createElement('p');notice.className='missing-media';notice.textContent=image.alt?.toLowerCase().includes('firma')?'Firma no disponible · vuelve a capturarla desde Editar':'Imagen no disponible';image.replaceWith(notice)}
   }));
   await document.fonts?.ready;
 }
