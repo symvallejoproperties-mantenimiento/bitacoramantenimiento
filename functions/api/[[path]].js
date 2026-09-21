@@ -11,10 +11,14 @@ function decodeDataUri(value){
 
 async function storeAsset(database,recordId,label,value){
   const decoded=decodeDataUri(value);if(!decoded)return value;
+  if(!decoded.bytes.byteLength)throw new Error('La imagen está vacía. Vuelve a capturar la firma antes de guardar.');
   if(decoded.bytes.byteLength>1900000)throw new Error('El archivo supera el límite gratuito de 1.9 MB. Reduce su tamaño antes de guardarlo.');
   const extension=decoded.type.split('/')[1]?.replace('jpeg','jpg').replace(/[^a-z0-9]/gi,'')||'bin';
   const key=`records/${safeKey(recordId)}/${safeKey(label)}-${crypto.randomUUID()}.${extension}`;
-  await database.prepare('INSERT INTO media(key,record_id,mime,data,created_at) VALUES(?1,?2,?3,?4,?5)').bind(key,recordId,decoded.type,decoded.bytes,new Date().toISOString()).run();
+  const payload=decoded.bytes.buffer.slice(decoded.bytes.byteOffset,decoded.bytes.byteOffset+decoded.bytes.byteLength);
+  await database.prepare('INSERT INTO media(key,record_id,mime,data,created_at) VALUES(?1,?2,?3,?4,?5)').bind(key,recordId,decoded.type,payload,new Date().toISOString()).run();
+  const stored=await database.prepare('SELECT length(data) AS size FROM media WHERE key=?1').bind(key).first();
+  if(Number(stored?.size)!==decoded.bytes.byteLength){await database.prepare('DELETE FROM media WHERE key=?1').bind(key).run();throw new Error('Cloudflare no confirmó la imagen completa. Intenta guardar nuevamente.');}
   return`/api/files/${key}`;
 }
 
@@ -72,6 +76,7 @@ async function state(request,env,segments,url){
 async function files(request,env,segments){
   if(request.method!=='GET')return json({error:'Método no permitido.'},405);
   const key=segments.join('/'),object=await env.DB.prepare('SELECT mime,data FROM media WHERE key=?1').bind(key).first();if(!object)return json({error:'Archivo no encontrado.'},404);
+  if(!object.data?.byteLength)return json({error:'El archivo está vacío. Vuelve a capturar la firma desde Administración.'},404);
   return new Response(object.data,{headers:{'Content-Type':object.mime||'application/octet-stream','Cache-Control':'private, max-age=3600'}});
 }
 
