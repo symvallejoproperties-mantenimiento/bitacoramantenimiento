@@ -37,6 +37,13 @@ async function offlineDelete(id){
     request.onerror=()=>reject(request.error);
   });
 }
+async function requestBackgroundSync(){
+  if(!('serviceWorker' in navigator))return;
+  try{
+    const registration=await navigator.serviceWorker.ready;
+    if('sync' in registration)await registration.sync.register('vp-sync-records');
+  }catch(error){console.warn('La sincronización se reintentará al abrir la aplicación.',error)}
+}
 async function pdfPut(id,data){const db=await offlineDb();return new Promise((resolve,reject)=>{const request=db.transaction(PDF_STORE,'readwrite').objectStore(PDF_STORE).put({id,data});request.onsuccess=()=>resolve(data);request.onerror=()=>reject(request.error)})}
 async function pdfGet(id){const db=await offlineDb();return new Promise((resolve,reject)=>{const request=db.transaction(PDF_STORE,'readonly').objectStore(PDF_STORE).get(id);request.onsuccess=()=>resolve(request.result?.data||'');request.onerror=()=>reject(request.error)})}
 
@@ -237,6 +244,7 @@ export const DB = {
       this.write(this.keys.pending,pending,{sync:false});
       this.cacheRecord(item.record,{compact:true});
     }catch(error){console.warn('La copia completa quedó protegida en el almacenamiento sin conexión.',error)}
+    requestBackgroundSync();
     return item.record;
   },
   async persistRecord(record,{preserveFolio=false}={}){
@@ -292,4 +300,10 @@ export const DB = {
   audit(action,folio){const a=this.read('vp_audit');a.unshift({action,folio,at:new Date().toISOString(),by:this.read(this.keys.session,{}).nombre||'Sistema'});this.write('vp_audit',a.slice(0,500),{sync:false})}
 };
 
-if(typeof window!=='undefined')window.addEventListener('online',()=>DB.flushPending().catch(error=>DB.setOffline(error)));
+if(typeof window!=='undefined'){
+  const resumeSync=()=>{if(navigator.onLine)DB.flushPending().catch(error=>DB.setOffline(error))};
+  window.addEventListener('online',resumeSync);
+  window.addEventListener('focus',resumeSync);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')resumeSync()});
+  setInterval(resumeSync,30000);
+}

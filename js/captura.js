@@ -1,4 +1,4 @@
-import {DB} from './storage.js?v=13';
+import {DB} from './storage.js?v=14';
 import {requireAuth,bindShell,can,homeFor} from './auth.js?v=7';
 import {$,toast,uid,minutes,esc} from './utils.js';
 import {signature} from './signature.js?v=3';
