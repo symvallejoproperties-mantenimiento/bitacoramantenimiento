@@ -158,3 +158,23 @@ $('#recordRows').addEventListener('click',event=>{const button=event.target.clos
 const renderTableBeforeRecovered=renderTable;
 renderTable=()=>{renderTableBeforeRecovered();[...$('#recordRows').rows].forEach((row,index)=>{const record=current[index],cell=row.cells[0];if(!record?.recuperada||!cell)return;if(!cell.querySelector('.recovered-badge'))cell.insertAdjacentHTML('beforeend',`<br><span class="recovered-badge">PDF recuperado · original ${esc(record.folioOriginal)}</span>`);row.cells[8].innerHTML='<span class="recovered-table-note">En PDF</span>';row.cells[9].innerHTML='<span class="recovered-table-note">En PDF</span>';const view=row.querySelector('[data-action="view"]'),print=row.querySelector('[data-action="print"]');if(view)view.title='Ver información y PDF original';if(print){print.title='Abrir PDF original';print.textContent='PDF'}})};
 renderTable();
+
+
+// El consecutivo del folio y el número de registros son datos distintos.
+const renderDashboardWithFolio=renderDashboard;
+renderDashboard=()=>{
+  renderDashboardWithFolio();
+  const items=records();
+  const folioNumber=record=>Number(String(record.folio||'').match(/(\d+)$/)?.[1]||0);
+  const lastFolio=Math.max(0,...items.map(folioNumber));
+  const cards=[...$('#kpis').children];
+  if(cards[0]){
+    cards[0].querySelector('span').textContent='Registros guardados';
+    cards[0].querySelector('small').textContent='Bitácoras existentes en el sistema';
+  }
+  const folioCard=document.createElement('article');
+  folioCard.className='card kpi';
+  folioCard.innerHTML=`<span>Último folio</span><strong>${lastFolio?String(lastFolio).padStart(6,'0'):'—'}</strong><small>${lastFolio?`VP-${String(lastFolio).padStart(6,'0')}`:'Sin folios'}</small>`;
+  $('#kpis').insertBefore(folioCard,cards[1]||null);
+};
+renderDashboard();
