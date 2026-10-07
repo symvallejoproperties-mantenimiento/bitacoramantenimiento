@@ -1,5 +1,4 @@
-if(!localStorage.getItem('vp_cloudflare_migrated_v1')){
-  if(false&&!localStorage.getItem('vp_cloudflare_migrated_v1')){const CLOUD_API='/api';
+const CLOUD_API='/api';
 
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
