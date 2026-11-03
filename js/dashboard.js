@@ -76,6 +76,109 @@ const renderTableWithVipFolio=renderTable;renderTable=()=>{renderTableWithVipFol
 window.addEventListener('vp:sync-requested',async()=>{await DB.flushPending();const reports=DB.signatureReports();if(reports.length)DB.syncState(DB.keys.reports,reports).catch(error=>DB.setOffline(error))});
 renderTable();
 
+// Cuadrillas por predio: mapa, encargado e integrantes editables y sincronizados.
+const crewWorkersSeed=[
+  {id:'worker-bautista',name:'BAUTISTA RUIZ PEDRO',nss:''},
+  {id:'worker-cortez',name:'CORTEZ JIMENEZ GUSTAVO',nss:''},
+  {id:'worker-esquivel',name:'ESQUIVEL GUTIERREZ JORGE GUADALUPE',nss:''},
+  {id:'worker-laredo',name:'LAREDO ARELLANES PEDRO LUIS',nss:''},
+  {id:'worker-miranda',name:'MIRANDA COLUNGA ISRAEL',nss:''},
+  {id:'worker-moreno',name:'MORENO CASTILLO JOSE RAUL',nss:''},
+  {id:'worker-ortiz',name:'ORTIZ NAVARRO ALEJANDRO',nss:''},
+  {id:'worker-rodriguez',name:'RODRIGUEZ VILLAGOMEZ ANTONIO',nss:''}
+];
+const crewLocationsSeed=[
+  ['HOLOPHANE','CARRETERA MÉXICO CUAUTITLAN KM 31, BARRIO DE LA CONCEPCION, TULTITLAN DE MARIANO ESCOBEDO, EDO. DE MÉXICO, C.P. 54900'],
+  ['NIZA','CALLE NIZA #77, COL. JUÁREZ, CUAUHTÉMOC, CDMX, C.P. 06600'],
+  ['AUDI','PONIENTE 140 #526 ESQUINA NORTE 35, COL. NUEVA INDUSTRIAL VALLEJO, GUSTAVO A. MADERO, CDMX, C.P. 07700'],
+  ['INDEPENDENCIA','CALLE 2DA #2, COL. INDEPENDENCIA, TULTITLAN, EDO. DE MÉXICO, C.P. 54915'],
+  ['CLAVEL','CALLE CLAVEL #227, COL. ATLAMPA, CUAUHTÉMOC, CDMX, C.P. 06450'],
+  ['KIWI','PONIENTE 140 #576, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['IZTAPALAPA','AV. REFORMA #13 SECCIÓN A, COL. LOMAS DE SAN LORENZO TEZONCO, IZTAPALAPA, CDMX, C.P. 09780'],
+  ['ACEITES','PONIENTE 140 #606, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['HORACIO','CALLE HORACIO #340, COL. POLANCO 1ERA SECCIÓN, MIGUEL HIDALGO, CDMX, C.P. 11550'],
+  ['MORESA 1','CALLE NORTE 35 #895, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['CEVA','PONIENTE 140 #717, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['MASARYK','AV. PRESIDENTE MASARYK #490, COL. POLANCO 2DA SECCIÓN, MIGUEL HIDALGO, CDMX, C.P. 11530'],
+  ['MORESA 2','CALLE NORTE 35 #908, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['RÍO LERMA','CALLE RÍO LERMA #4, COL. RENACIMIENTO, CUAUHTÉMOC, CDMX, C.P. 06500'],
+  ['ENDERA','PONIENTE 148 #431 Y CALZADA VALLEJO #1109, COL. NUEVA INDUSTRIAL VALLEJO, GUSTAVO A. MADERO, CDMX, C.P. 07720'],
+  ['MALTA','PONIENTE 134 #786, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['MONTEVIDEO 636','AV. MONTEVIDEO #636, COL. SAN BARTOLO ATEPEHUACAN, GUSTAVO A. MADERO, CDMX, C.P. 07730'],
+  ['STANHOME','PONIENTE 146 #624, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['IPM','AV. PONIENTE 140 #717, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['MARLUX','PONIENTE 146 #700, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['PLAZA DEL CATALOGO','CALLE NORTE 45 #1017, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['CORONA','PONIENTE 146 #725, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['PLAZA TLALNEPANTLA','AV. PRESIDENTE JUÁREZ #96, COL. BELLAVISTA, TLALNEPANTLA, EDO. DE MÉXICO, C.P. 54080'],
+  ['POTOSINOS','PONIENTE 150 #734, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['SANTA LUCIA','CAMINO SANTA LUCIA #162, COL. SANTA CRUZ ACAYUCAN, AZCAPOTZALCO, CDMX, C.P. 02770'],
+  ['AV TORRES','AV. DE LAS TORRES #485, COL. INDUSTRIAL VALLEJO, GUSTAVO A. MADERO, CDMX, C.P. 07700'],
+  ['CUATITLAN MASTER PARK','AV. DE LA LUZ #90, COL. SAN LORENZO RÍO TENCO, CUAUTITLAN IZCALLI, EDO. DE MÉXICO, C.P. 54716'],
+  ['MONTEVIDEO 181','AV. MONTEVIDEO #181, COL. LINDAVISTA, GUSTAVO A. MADERO, CDMX, C.P. 07300'],
+  ['MONTEVIDEO 213','AV. MONTEVIDEO #213, COL. LINDAVISTA, GUSTAVO A. MADERO, CDMX, C.P. 07300'],
+  ['ALCE BLANCO','LOTE 8 MZA. 1, FRACCIONAMIENTO INDUSTRIAL ALCE BLANCO, NAUCALPAN DE JUÁREZ, EDO. DE MÉXICO, C.P. 53370'],
+  ['DIESEL VALLEJO','CALZADA VALLEJO #1040, COL. INDUSTRIAL VALLEJO, AZCAPOTZALCO, CDMX, C.P. 02300'],
+  ['FERRERIA','ANTIGUA CALZADA GUADALUPE AZCAPOTZALCO #251, BARRIO DE SAN MARCOS, AZCAPOTZALCO, CDMX, C.P. 02020'],
+  ['EDUARDO MOLINA 1','ORIENTE 171 #473, COL. AMPLIACIÓN SAN JUAN DE ARAGÓN, GUSTAVO A. MADERO, CDMX, C.P. 07470'],
+  ['PARQUES PLAZA NUEVA POLANCO','LAGO ALBERTO #442, COL. ANÁHUAC, MIGUEL HIDALGO, CDMX, C.P. 11320'],
+  ['EDUARDO MOLINA 2','ORIENTE 171 #450, COL. AMPLIACIÓN SAN JUAN DE ARAGÓN, GUSTAVO A. MADERO, CDMX, C.P. 07470'],
+  ['NICOLAS SAN JUAN','NICOLÁS SAN JUAN #1515, COL. DEL VALLE SUR, BENITO JUÁREZ, CDMX, C.P. 03104'],
+  ['BUENAVISTA PARK','AV. BUENAVISTA, MUNICIPIO TEPOTZOTLÁN, CUAUTITLAN IZCALLI, EDO. DE MÉXICO, C.P. 54710'],
+  ['PRESIDENTE JUAREZ TEXTIL','AV. PRESIDENTE JUÁREZ #21, COL. CENTRO, TLALNEPANTLA, EDO. DE MÉXICO, C.P. 54090'],
+  ['NORTE 45','NORTE 45 #791, COL. HUAUTLA DE LAS SALINAS, AZCAPOTZALCO, CDMX, C.P. 02330'],
+  ['ARTECOLA','CALZADA DE LAS ARMAS #120, COL. LAS ARMAS ZONA, TLALNEPANTLA, EDO. DE MÉXICO, C.P. 54080'],
+  ['QUIMIR','AV. JOSÉ LÓPEZ PORTILLO #39, COL. LECHERÍA, TULTITLAN, EDO. DE MÉXICO, C.P. 54940'],
+  ['MOLINO','AV. SEBASTIÁN LERDO DE TEJADA #305, BARRIO DE LA MERCED, TOLUCA DE LERDO, EDO. DE MÉXICO, C.P. 50080'],
+  ['CAME (DEL VALLE)','AV. COLONIA DEL VALLE #615, COL. DEL VALLE CENTRO, BENITO JUÁREZ, CDMX, C.P. 03100'],
+  ['TOLUCA VICENTE GUERRERO','PRESIDENTE GRAL. VICENTE GUERRERO #486, COL. MORELOS PRIMERA SECCIÓN, TOLUCA DE LERDO, EDO. DE MÉXICO, C.P. 50120'],
+  ['COACALCO PARK 1','AV. JOSÉ LÓPEZ PORTILLO #10-A, COL. COACALCO, SAN FRANCISCO COACALCO, EDO. DE MÉXICO, C.P. 55700']
+];
+const crewsNav=document.createElement('button');crewsNav.className='nav-btn';crewsNav.dataset.section='crews';crewsNav.innerHTML='📍 Cuadrillas';document.querySelector('[data-section="staff"]')?.insertAdjacentElement('afterend',crewsNav);
+document.querySelector('#reports')?.insertAdjacentHTML('beforebegin',`<section class="section" id="crews"><div class="page-title"><div><span class="eyebrow">OPERACIÓN EN CAMPO</span><h1>Cuadrillas</h1><p>Ubicación, encargado e integrantes asignados por predio.</p></div><div><button class="btn" id="manageCrewWorkers" type="button">Editar personal</button> <button class="btn primary" id="newCrew" type="button">+ Nueva cuadrilla</button></div></div><div class="crew-toolbar"><input id="crewSearch" type="search" placeholder="Buscar predio, encargado o integrante…"><span id="crewCount"></span></div><div class="crew-layout"><div id="crewCards" class="crew-cards"></div><article class="card crew-detail"><div id="crewMap" class="crew-map"><div class="empty">Selecciona una cuadrilla para ver su ubicación.</div></div><form id="crewForm" class="crew-form hidden"><input name="id" type="hidden"><div class="field"><label>Predio</label><select name="property"></select></div><div class="field"><label>Dirección para el mapa</label><textarea name="address" rows="3" required></textarea></div><div class="field"><label>Encargado de la cuadrilla</label><select name="leader"><option value="">Sin asignar</option></select></div><fieldset><legend>Personal de mantenimiento</legend><div id="crewWorkerChoices" class="crew-worker-choices"></div></fieldset><label class="confirm-box"><input name="active" type="checkbox" checked> Cuadrilla activa</label><div class="crew-actions"><button class="btn primary" type="submit">Guardar cambios</button><button class="btn danger" id="deleteCrew" type="button">Eliminar</button></div><p id="crewReadOnly" class="crew-read-only hidden">Vista de consulta. Solo el perfil administrativo principal puede editar asignaciones y NSS.</p></form></article></div></section>`);
+document.body.insertAdjacentHTML('beforeend',`<dialog id="crewWorkersDialog"><div class="modal-head"><strong>Personal de mantenimiento</strong><button class="btn" id="closeCrewWorkers" type="button">Cerrar</button></div><div class="modal-body"><p>Agrega, modifica o elimina integrantes. Los cambios se reflejan en todas las cuadrillas.</p><form id="crewWorkerForm" class="crew-worker-editor"><input name="id" type="hidden"><div class="field"><label>Nombre completo</label><input name="name" required></div><div class="field"><label>Número de seguridad social</label><input name="nss" required placeholder="00-00-00-0000-0"></div><button class="btn primary" type="submit">Guardar integrante</button><button class="btn hidden" id="cancelCrewWorkerEdit" type="button">Cancelar edición</button></form><div id="crewWorkerList" class="crew-worker-list"></div></div></dialog>`);
+let selectedCrewId='';
+const crewCanEdit=can(session,'configuracion');
+const crewSettings=()=>{const settings=DB.settings();let changed=false;if(!Array.isArray(settings.crewWorkers)||!settings.crewWorkers.length){settings.crewWorkers=crewWorkersSeed.map(worker=>({...worker}));changed=true}if(!Array.isArray(settings.crews)||!settings.crews.length){settings.crews=crewLocationsSeed.map(([property,address],index)=>({id:`crew-${index+1}`,property,address,leader:'',workerIds:[],active:true}));changed=true}if(changed)DB.write(DB.keys.settings,settings);return settings};
+const crewLeaders=()=>[...new Set([...DB.settings().responsibles,...DB.users().filter(user=>user.rol==='encargado').map(user=>user.nombre)])].filter(name=>name&&name!=='Contratista'&&!/prueba/i.test(name)).sort((a,b)=>a.localeCompare(b,'es'));
+const maskedNss=nss=>!nss?'Pendiente de captura':crewCanEdit?nss:`••-••-••-${String(nss).slice(-6)}`;
+async function saveCrewSettings(settings,message='Cuadrillas actualizadas y sincronizadas.') {await DB.saveShared(DB.keys.settings,settings);toast(message)}
+function crewMapMarkup(crew){if(!crew?.address)return'<div class="empty">Captura una dirección para mostrar el mapa.</div>';const query=encodeURIComponent(crew.address);return`<iframe title="Mapa de ${esc(crew.property)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${query}&output=embed"></iframe><a class="crew-map-link" href="https://www.google.com/maps/search/?api=1&query=${query}" target="_blank" rel="noopener">Abrir ubicación en Google Maps ↗</a>`}
+function fillCrewForm(crew){const form=$('#crewForm'),settings=crewSettings(),workers=settings.crewWorkers;selectedCrewId=crew.id;form.classList.remove('hidden');form.elements.id.value=crew.id;form.elements.property.innerHTML=[...new Set([...DB.properties(),...crewLocationsSeed.map(item=>item[0])])].sort((a,b)=>a.localeCompare(b,'es')).map(value=>`<option${value===crew.property?' selected':''}>${esc(value)}</option>`).join('');form.elements.address.value=crew.address||'';form.elements.leader.innerHTML='<option value="">Sin asignar</option>'+crewLeaders().map(value=>`<option${value===crew.leader?' selected':''}>${esc(value)}</option>`).join('');form.elements.active.checked=crew.active!==false;$('#crewWorkerChoices').innerHTML=workers.map(worker=>`<label><input type="checkbox" name="workerIds" value="${worker.id}" ${(crew.workerIds||[]).includes(worker.id)?'checked':''}><span><strong>${esc(worker.name)}</strong><small>NSS ${esc(maskedNss(worker.nss))}</small></span></label>`).join('');[...form.elements].forEach(input=>{if(input.name!=='id')input.disabled=!crewCanEdit});$('#deleteCrew').classList.toggle('hidden',!crewCanEdit);$('#crewReadOnly').classList.toggle('hidden',crewCanEdit);$('#crewMap').innerHTML=crewMapMarkup(crew);document.querySelectorAll('[data-crew-id]').forEach(card=>card.classList.toggle('selected',card.dataset.crewId===crew.id))}
+function renderCrews(){const settings=crewSettings(),workers=settings.crewWorkers,q=($('#crewSearch')?.value||'').trim().toLowerCase(),items=settings.crews.filter(crew=>{const names=(crew.workerIds||[]).map(id=>workers.find(worker=>worker.id===id)?.name||'').join(' ');return!q||`${crew.property} ${crew.address} ${crew.leader} ${names}`.toLowerCase().includes(q)}).sort((a,b)=>a.property.localeCompare(b.property,'es'));$('#crewCount').textContent=`${items.length} ${items.length===1?'predio':'predios'}`;$('#crewCards').innerHTML=items.map(crew=>{const members=(crew.workerIds||[]).map(id=>workers.find(worker=>worker.id===id)).filter(Boolean);return`<button class="crew-card ${crew.id===selectedCrewId?'selected':''}" type="button" data-crew-id="${crew.id}"><span class="crew-status ${crew.active===false?'inactive':''}">${crew.active===false?'Inactiva':'Activa'}</span><strong>${esc(crew.property)}</strong><small>${esc(crew.address||'Dirección pendiente')}</small><span><b>${esc(crew.leader||'Sin encargado')}</b> · ${members.length} integrante${members.length===1?'':'s'}</span></button>`}).join('')||'<p class="empty">No hay cuadrillas que coincidan con la búsqueda.</p>';const selected=settings.crews.find(crew=>crew.id===selectedCrewId)||items[0];if(selected)fillCrewForm(selected);else{$('#crewForm').classList.add('hidden');$('#crewMap').innerHTML='<div class="empty">No hay una cuadrilla seleccionada.</div>'}}
+crewsNav.onclick=()=>{$$('.nav-btn').forEach(button=>button.classList.remove('active'));crewsNav.classList.add('active');$$('.section').forEach(section=>section.classList.remove('active'));$('#crews').classList.add('active');renderCrews()};
+$('#crewSearch').oninput=renderCrews;$('#crewCards').onclick=event=>{const card=event.target.closest('[data-crew-id]');if(!card)return;const crew=crewSettings().crews.find(item=>item.id===card.dataset.crewId);if(crew)fillCrewForm(crew)};
+$('#newCrew').onclick=()=>{if(!crewCanEdit)return toast('Tu perfil solo puede consultar las cuadrillas.','error');const settings=crewSettings(),crew={id:uid(),property:DB.properties()[0]||'Nuevo predio',address:'',leader:'',workerIds:[],active:true};settings.crews.push(crew);selectedCrewId=crew.id;renderCrews();$('#crewForm [name=address]').focus()};
+$('#crewForm').onsubmit=async event=>{event.preventDefault();if(!crewCanEdit)return;const settings=crewSettings(),crew=settings.crews.find(item=>item.id===selectedCrewId);if(!crew)return;const data=new FormData(event.currentTarget);crew.property=String(data.get('property')||'').trim();crew.address=String(data.get('address')||'').trim();crew.leader=String(data.get('leader')||'').trim();crew.workerIds=data.getAll('workerIds');crew.active=event.currentTarget.elements.active.checked;crew.updatedAt=new Date().toISOString();crew.updatedBy=session.nombre;try{await saveCrewSettings(settings);renderCrews()}catch(error){console.error(error);toast('No fue posible sincronizar la cuadrilla.','error')}};
+$('#deleteCrew').onclick=async()=>{if(!crewCanEdit||!selectedCrewId||!confirm('¿Eliminar esta cuadrilla?'))return;const settings=crewSettings(),index=settings.crews.findIndex(item=>item.id===selectedCrewId);if(index<0)return;settings.crews.splice(index,1);selectedCrewId='';try{await saveCrewSettings(settings,'Cuadrilla eliminada y sincronizada.');renderCrews()}catch(error){console.error(error);toast('No fue posible eliminar la cuadrilla.','error')}};
+function renderCrewWorkerEditor(){const workers=crewSettings().crewWorkers;$('#crewWorkerList').innerHTML=workers.map(worker=>`<div class="list-row"><span><strong>${esc(worker.name)}</strong><br><small>NSS ${esc(worker.nss)}</small></span><span><button class="btn" type="button" data-edit-crew-worker="${worker.id}">Editar</button> <button class="btn danger" type="button" data-delete-crew-worker="${worker.id}">Eliminar</button></span></div>`).join('')}
+$('#manageCrewWorkers').onclick=()=>{renderCrewWorkerEditor();$('#crewWorkerForm').reset();$('#cancelCrewWorkerEdit').classList.add('hidden');$('#crewWorkersDialog').showModal()};$('#closeCrewWorkers').onclick=()=>$('#crewWorkersDialog').close();$('#cancelCrewWorkerEdit').onclick=()=>{$('#crewWorkerForm').reset();$('#cancelCrewWorkerEdit').classList.add('hidden')};
+$('#crewWorkerList').onclick=async event=>{const edit=event.target.closest('[data-edit-crew-worker]'),remove=event.target.closest('[data-delete-crew-worker]'),settings=crewSettings(),id=edit?.dataset.editCrewWorker||remove?.dataset.deleteCrewWorker,worker=settings.crewWorkers.find(item=>item.id===id);if(!worker)return;if(edit){const form=$('#crewWorkerForm');form.elements.id.value=worker.id;form.elements.name.value=worker.name;form.elements.nss.value=worker.nss;$('#cancelCrewWorkerEdit').classList.remove('hidden')}if(remove&&confirm(`¿Eliminar a ${worker.name} del catálogo y de todas las cuadrillas?`)){settings.crewWorkers=settings.crewWorkers.filter(item=>item.id!==id);settings.crews.forEach(crew=>crew.workerIds=(crew.workerIds||[]).filter(workerId=>workerId!==id));try{await saveCrewSettings(settings,'Integrante eliminado y cuadrillas actualizadas.');renderCrewWorkerEditor();renderCrews()}catch(error){console.error(error);toast('No fue posible eliminar al integrante.','error')}}};
+$('#crewWorkerForm').onsubmit=async event=>{event.preventDefault();const settings=crewSettings(),data=Object.fromEntries(new FormData(event.currentTarget)),name=data.name.trim().toUpperCase(),nss=data.nss.trim();if(!name||!nss)return toast('Captura nombre y número de seguridad social.','error');const worker=data.id?settings.crewWorkers.find(item=>item.id===data.id):null;if(worker){worker.name=name;worker.nss=nss}else settings.crewWorkers.push({id:uid(),name,nss});try{await saveCrewSettings(settings,'Personal actualizado y sincronizado.');event.currentTarget.reset();$('#cancelCrewWorkerEdit').classList.add('hidden');renderCrewWorkerEditor();renderCrews()}catch(error){console.error(error);toast('No fue posible guardar al integrante.','error')}};
+if(!crewCanEdit){$('#newCrew').remove();$('#manageCrewWorkers').remove()}
+setInterval(()=>{if(document.querySelector('#crews.section.active'))renderCrews()},20000);
+
+// El consecutivo del folio y el número de registros son datos distintos:
+// puede haber huecos por pruebas, importaciones o eliminaciones. El resumen
+// muestra ambos para evitar que un folio alto parezca un conteo desactualizado.
+const renderDashboardWithFolio=renderDashboard;
+renderDashboard=()=>{
+  renderDashboardWithFolio();
+  const items=records();
+  const folioNumber=record=>Number(String(record.folio||'').match(/(\d+)$/)?.[1]||0);
+  const lastFolio=Math.max(0,...items.map(folioNumber));
+  const cards=[...$('#kpis').children];
+  if(cards[0]){
+    cards[0].querySelector('span').textContent='Registros guardados';
+    cards[0].querySelector('small').textContent='Bitácoras existentes en el sistema';
+  }
+  const folioCard=document.createElement('article');
+  folioCard.className='card kpi';
+  folioCard.innerHTML=`<span>Último folio</span><strong>${lastFolio?String(lastFolio).padStart(6,'0'):'—'}</strong><small>${lastFolio?`VP-${String(lastFolio).padStart(6,'0')}`:'Sin folios'}</small>`;
+  $('#kpis').insertBefore(folioCard,cards[1]||null);
+};
+renderDashboard();
+
 // Prepara todos los recursos antes de imprimir. Las fotos y firmas de D1 se
 // incrustan para que Safari/Chrome no pierdan las URLs durante la impresión.
 const printableBlobDataUrl=blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
@@ -158,23 +261,3 @@ $('#recordRows').addEventListener('click',event=>{const button=event.target.clos
 const renderTableBeforeRecovered=renderTable;
 renderTable=()=>{renderTableBeforeRecovered();[...$('#recordRows').rows].forEach((row,index)=>{const record=current[index],cell=row.cells[0];if(!record?.recuperada||!cell)return;if(!cell.querySelector('.recovered-badge'))cell.insertAdjacentHTML('beforeend',`<br><span class="recovered-badge">PDF recuperado · original ${esc(record.folioOriginal)}</span>`);row.cells[8].innerHTML='<span class="recovered-table-note">En PDF</span>';row.cells[9].innerHTML='<span class="recovered-table-note">En PDF</span>';const view=row.querySelector('[data-action="view"]'),print=row.querySelector('[data-action="print"]');if(view)view.title='Ver información y PDF original';if(print){print.title='Abrir PDF original';print.textContent='PDF'}})};
 renderTable();
-
-
-// El consecutivo del folio y el número de registros son datos distintos.
-const renderDashboardWithFolio=renderDashboard;
-renderDashboard=()=>{
-  renderDashboardWithFolio();
-  const items=records();
-  const folioNumber=record=>Number(String(record.folio||'').match(/(\d+)$/)?.[1]||0);
-  const lastFolio=Math.max(0,...items.map(folioNumber));
-  const cards=[...$('#kpis').children];
-  if(cards[0]){
-    cards[0].querySelector('span').textContent='Registros guardados';
-    cards[0].querySelector('small').textContent='Bitácoras existentes en el sistema';
-  }
-  const folioCard=document.createElement('article');
-  folioCard.className='card kpi';
-  folioCard.innerHTML=`<span>Último folio</span><strong>${lastFolio?String(lastFolio).padStart(6,'0'):'—'}</strong><small>${lastFolio?`VP-${String(lastFolio).padStart(6,'0')}`:'Sin folios'}</small>`;
-  $('#kpis').insertBefore(folioCard,cards[1]||null);
-};
-renderDashboard();
