@@ -1,5 +1,5 @@
 import {DB} from './storage.js?v=14';import {requireAuth,bindShell,can,permissionsFor} from './auth.js?v=8';import {$,$$,fmtDate,esc,toast,download,uid} from './utils.js';import {groupBy,listHtml} from './reportes.js';import {downloadPdf} from './pdf-download.js';import {signature} from './signature.js?v=3';
-const crewStyles=document.createElement('link');crewStyles.rel='stylesheet';crewStyles.href='css/dashboard.css?v=11';document.head.appendChild(crewStyles);
+const crewStyles=document.createElement('link');crewStyles.rel='stylesheet';crewStyles.href='css/dashboard.css?v=13';document.head.appendChild(crewStyles);
 const session=await requireAuth('administracion');if(!session)await new Promise(()=>{});bindShell();$('#welcome').textContent=`Bienvenido, ${session.nombre}. Esta es la situación actual de mantenimiento.`;$('#today').textContent=new Intl.DateTimeFormat('es-MX',{day:'2-digit',month:'short',year:'numeric'}).format(new Date());const configNav=document.querySelector('[data-section="config"]');if(!can(session,'configuracion'))configNav?.remove();
 let current=[];const records=()=>DB.records();
 const continuityLabel=record=>record.esContinuidad?`Continuidad de ${record.continuidadDeFolio||'otra bitácora'}`:record.continuaciones?.length?`Con seguimiento: ${record.continuaciones.map(item=>item.folio).join(', ')}`:'Sin continuidad vinculada';
@@ -262,4 +262,36 @@ $('#detailDialog').addEventListener('close',clearRecoveredPreview);
 $('#recordRows').addEventListener('click',event=>{const button=event.target.closest('[data-action="print"]');if(!button)return;const record=records().find(item=>item.id===button.dataset.id);if(!record?.recuperada)return;event.preventDefault();event.stopImmediatePropagation();openRecoveredPdf(record)},true);
 const renderTableBeforeRecovered=renderTable;
 renderTable=()=>{renderTableBeforeRecovered();[...$('#recordRows').rows].forEach((row,index)=>{const record=current[index],cell=row.cells[0];if(!record?.recuperada||!cell)return;if(!cell.querySelector('.recovered-badge'))cell.insertAdjacentHTML('beforeend',`<br><span class="recovered-badge">PDF recuperado · original ${esc(record.folioOriginal)}</span>`);row.cells[8].innerHTML='<span class="recovered-table-note">En PDF</span>';row.cells[9].innerHTML='<span class="recovered-table-note">En PDF</span>';const view=row.querySelector('[data-action="view"]'),print=row.querySelector('[data-action="print"]');if(view)view.title='Ver información y PDF original';if(print){print.title='Abrir PDF original';print.textContent='PDF'}})};
+renderTable();
+
+// Las bitácoras capturadas sin señal aparecen de inmediato en Administración.
+const recordsHeading=$('#records .page-title');
+recordsHeading?.insertAdjacentHTML('afterend','<div id="offlineRecordsStatus" class="offline-records-status hidden" role="status" aria-live="polite"></div>');
+const renderTableWithOfflineState=renderTable;
+function renderOfflineRecordsStatus(){
+  const pendingIds=new Set(DB.pending().map(item=>item.record?.id).filter(Boolean));
+  records().filter(record=>record._pendingSync).forEach(record=>pendingIds.add(record.id));
+  const box=$('#offlineRecordsStatus'),total=pendingIds.size;
+  if(!box)return;
+  box.classList.toggle('hidden',total===0);
+  box.innerHTML=total?`<strong>${total} bitácora${total===1?'':'s'} guardada${total===1?'':'s'} fuera de línea</strong><span>Ya ${total===1?'aparece':'aparecen'} en esta lista y se ${total===1?'enviará':'enviarán'} automáticamente cuando regrese internet.</span>`:'';
+}
+renderTable=()=>{
+  renderTableWithOfflineState();
+  const pendingIds=new Set(DB.pending().map(item=>item.record?.id).filter(Boolean));
+  [...$('#recordRows').rows].forEach((row,index)=>{
+    const record=current[index],pending=record?._pendingSync||pendingIds.has(record?.id);
+    row.classList.toggle('offline-pending-row',Boolean(pending));
+    const folio=row.cells[0];
+    if(pending&&folio&&!folio.querySelector('.offline-pending-badge'))folio.insertAdjacentHTML('beforeend','<br><span class="offline-pending-badge">Pendiente de sincronizar</span>');
+  });
+  renderOfflineRecordsStatus();
+};
+window.addEventListener('vp:sync-requested',async()=>{
+  await DB.flushPending();
+  renderTable();
+  renderDashboard();
+});
+window.addEventListener('offline',renderOfflineRecordsStatus);
+window.addEventListener('online',renderOfflineRecordsStatus);
 renderTable();
