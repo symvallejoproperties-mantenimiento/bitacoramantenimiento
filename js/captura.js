@@ -1,4 +1,4 @@
-import {DB} from './storage.js?v=14';
+import {DB} from './storage.js?v=15';
 import {requireAuth,bindShell,can,homeFor} from './auth.js?v=8';
 import {$,toast,uid,minutes,esc} from './utils.js';
 import {signature} from './signature.js?v=3';
@@ -7,10 +7,11 @@ import {downloadPdf} from './pdf-download.js';
 
 const session=await requireAuth();
 if(session.rol!=='public'&&!can(session,'trabajos'))location.href=homeFor(session);
-bindShell();Promise.all([DB.flushPending(),DB.refreshRecords(),DB.refreshSharedState()]).catch(error=>console.warn('Se usarán los datos disponibles en este dispositivo.',error));
+bindShell();
 const isVip=document.body.dataset.registro==='vip',settings=DB.settings();
 const workers=[['90-88-70-4208-4','BAUTISTA RUIZ PEDRO'],['35-14-96-1207-5','CORTEZ JIMENEZ GUSTAVO'],['39-00-80-0974-6','ESQUIVEL GUTIERREZ JORGE GUADALUPE'],['27-17-97-6551-9','LAREDO ARELLANES PEDRO LUIS'],['02-24-76-2259-6','MIRANDA COLUNGA ISRAEL'],['45-01-78-0957-0','MORENO CASTILLO JOSE RAUL'],['01-10-91-0944-5','ORTIZ NAVARRO ALEJANDRO'],['90-87-70-0466-4','RODRIGUEZ VILLAGOMEZ ANTONIO']];
-$('#folio').textContent=`${isVip?'★ ':''}VP-${String(settings.nextFolio||1).padStart(6,'0')}`;$('#currentDate').textContent=new Intl.DateTimeFormat('es-MX',{dateStyle:'full'}).format(new Date());setInterval(()=>$('#clock').textContent=new Date().toLocaleTimeString('es-MX'),1000);
+const updateFolioPreview=()=>{$('#folio').textContent=`${isVip?'★ ':''}${DB.peekNextFolio()}`};
+updateFolioPreview();Promise.all([DB.flushPending(),DB.refreshRecords(),DB.refreshSharedState()]).then(updateFolioPreview).catch(error=>console.warn('Se usarán los datos disponibles en este dispositivo.',error));$('#currentDate').textContent=new Intl.DateTimeFormat('es-MX',{dateStyle:'full'}).format(new Date());setInterval(()=>$('#clock').textContent=new Date().toLocaleTimeString('es-MX'),1000);
 DB.properties().forEach(x=>$('#predio').add(new Option(x,x)));$('#responsable').add(new Option('Seleccionar encargado',''));settings.responsibles.forEach(x=>$('#responsable').add(new Option(x,x)));$('#responsable').value=session.rol==='encargado'&&settings.responsibles.includes(session.nombre)?session.nombre:'';$('#fechaServicio').valueAsDate=new Date();
 const typeCatalog=$('#tipoCatalogo');if(typeCatalog){[...new Set(['Preventivo','Correctivo','Programado',...(settings.types||[])])].filter(type=>![...typeCatalog.options].some(option=>option.value===type)).forEach(type=>typeCatalog.add(new Option(type,type)));typeCatalog.onchange=()=>{if(typeCatalog.value)$('#tipo').value=typeCatalog.value};$('#tipo').oninput=()=>typeCatalog.value=[...typeCatalog.options].some(o=>o.value===$('#tipo').value)?$('#tipo').value:''}
 const picker=document.createElement('div');picker.className='continuation-picker';picker.innerHTML=`<div class="field"><label>¿Es un servicio al que se le está dando continuidad?</label><div class="pill-options"><input type="radio" name="esContinuacion" id="continuationNo" value="No" checked><label for="continuationNo">No</label><input type="radio" name="esContinuacion" id="continuationYes" value="Sí"><label for="continuationYes">Sí</label></div></div><div id="linkedServiceBox" class="field hidden"><label for="servicioOrigenId">Número de bitácora pendiente *</label><select name="servicioOrigenId" id="servicioOrigenId"><option value="">Seleccionar número de bitácora</option></select><small>Solo aparecen servicios pendientes o en proceso.</small><div id="linkedServiceSummary" class="linked-service-summary hidden"></div></div>`;$('#tipo').closest('.card').querySelector('.grid').append(picker);

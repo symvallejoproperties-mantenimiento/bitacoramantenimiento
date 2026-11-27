@@ -171,13 +171,10 @@ export const DB = {
     const merged=[...combined.values()].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
     this.writeRecords(merged);
 
-    if(!localStorage.getItem('vp_cloudflare_migrated_v1')){
-      const remoteIds=new Set(remote.map(record=>record.id));
-      for(const record of local.filter(item=>item.id&&!remoteIds.has(item.id))){
-        await this.saveRecord(record,{forceInsert:true,preserveFolio:true});
-      }
-      localStorage.setItem('vp_cloudflare_migrated_v1','1');
-    }
+    // La migración inicial ya terminó. No se reinsertan automáticamente datos
+    // que sólo permanezcan en un navegador antiguo, pues podrían corresponder
+    // a bitácoras eliminadas deliberadamente desde Administración.
+    localStorage.setItem('vp_cloudflare_migrated_v1','1');
   },
   async refreshRecords(){
     const remote=await cloud('records')||[];
@@ -215,6 +212,10 @@ export const DB = {
     return value;
   },
   records(){return this.read(this.keys.records)}, users(){return this.read(this.keys.users)}, properties(){return this.read(this.keys.properties)}, settings(){return this.read(this.keys.settings,{})}, signatureReports(){return this.read(this.keys.reports,[])},
+  folioNumber(value){return Number(String(value||'').match(/(\d+)$/)?.[1]||0)},
+  highestFolioNumber(){return Math.max(0,...this.records().map(record=>this.folioNumber(record.folio)))},
+  peekNextFolioNumber(){return Math.max(1,Number(this.settings().nextFolio||1),this.highestFolioNumber()+1)},
+  peekNextFolio(){return `VP-${String(this.peekNextFolioNumber()).padStart(6,'0')}`},
   async saveSignatureReport(report){
     const reports=this.signatureReports(),index=reports.findIndex(item=>item.id===report.id);
     if(index<0)reports.unshift(report);else reports[index]=report;
@@ -296,7 +297,7 @@ export const DB = {
     await cloud(`records/${encodeURIComponent(id)}`,{method:'DELETE'});
     this.write(this.keys.records,this.records().filter(item=>item.id!==id),{sync:false});
   },
-  nextFolio(){const s=this.settings(),n=Number(s.nextFolio||1);s.nextFolio=n+1;this.write(this.keys.settings,s);return `VP-${String(n).padStart(6,'0')}`},
+  nextFolio(){const s=this.settings(),n=this.peekNextFolioNumber();s.nextFolio=n+1;this.write(this.keys.settings,s);return `VP-${String(n).padStart(6,'0')}`},
   audit(action,folio){const a=this.read('vp_audit');a.unshift({action,folio,at:new Date().toISOString(),by:this.read(this.keys.session,{}).nombre||'Sistema'});this.write('vp_audit',a.slice(0,500),{sync:false})}
 };
 
